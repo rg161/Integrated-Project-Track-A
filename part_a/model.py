@@ -23,17 +23,17 @@ def F_jac(x, u, dt):
     #df/dx
     v, w, = u
     th = x[2] + 0.5 * w * dt
-    return np.array([[1, 0, -v * np.sin(th) * dt]]
-                    [0, 1, v * np.cos(th) * dt]
-                    [0, 0, 1]
+    return np.array([[1, 0, -v * np.sin(th) * dt],
+                    [0, 1, v * np.cos(th) * dt],
+                    [0, 0, 1]]
     )
 
 def G_jac(x, u, dt):
     #df/du
     v, w = u
     th = x[2] + 0.5 * w *dt
-    return np.array([[dt * np.cos(th), -0.5 * v * dt**2 * np.sin(th)]
-                     [dt * np.sin(th), 0.5 * v * dt**2 * np.cos(th)]
+    return np.array([[dt * np.cos(th), -0.5 * v * dt**2 * np.sin(th)],
+                     [dt * np.sin(th), 0.5 * v * dt**2 * np.cos(th)],
                      [0, dt]])
 
 def H_jac(x, m):
