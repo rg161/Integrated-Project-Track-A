@@ -45,4 +45,25 @@ def obs(x0, u, m, N=30):
 
 s, Vt = obs([0, 0, 0.3], [0.15, 0.3], m)
 pred = np.array([-(0 - m[1]), (0 - m[0]), 1.0]); pred /= np.linalg.norm(pred)
-print("null vector:", np.round(Vt[-1], 4), "predicted:", np.round(pred, 4))   # may differ by a sign
+print("null vector:", np.round(Vt[-1], 4), "predicted:", np.round(pred, 4)) 
+
+#Test 2nd landmark
+def obs_multi(x0, u, landmarks, N = 30):
+    x = np.array(x0, float); Phi = np.eye(3); rows = []
+    for _ in range(N):
+        for mk in landmarks:
+            rows.append(H_jac(x, mk) @ Phi)
+        Phi = F_jac(x, u, dt) @ Phi
+        x = f(x, u, dt)
+    _, s, Vt = np.linalg.svd(np.vstack(rows))
+    return s, Vt
+
+cases = {
+    "one landmark":        [np.array([2.0, 1.0])],
+    "two, far apart":   [np.array([2.0, 1.0]), np.array([-1.0, 2.0])],
+    "two, nearly aligned": [np.array([2.0, 1.0]), np.array([4.0, 2.0])],
+    "two, close together": [np.array([2.0, 1.0]), np.array([2.1, 1.0])],
+}
+for name, lms in cases.items():
+    s, Vt = obs_multi([0, 0, 0.3], [0.15, 0.3], lms)
+    print(f"{name}: rank {int((s > 1e-8).sum())}, singular values {np.round(s, 6)}")
