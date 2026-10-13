@@ -1,7 +1,7 @@
 import numpy as np
 
-R_wheel = 0.033 #wheel radius (m) from provided model
-L_wheel = 0.288 #wheel separation (m) from provided model
+R_wheel = 0.0283 #wheel radius (m) from provided model
+L_wheel = 0.353 #wheel separation (m) from provided model
 
 def wrap(a):
     return (a + np.pi) % (2 * np.pi) - np.pi
