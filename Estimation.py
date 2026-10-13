@@ -108,7 +108,7 @@ class MobileRobotEKF:
 
         # Kalman gain
         K = (self.P @ H.T @ np.linalg.inv(S))
-
+        self.x = self.x + K @ innovation
         # Correct estimate
         self.x[2] = wrap_angle(self.x[2])
         #Correct covariance
@@ -118,7 +118,7 @@ class MobileRobotEKF:
 
     def get_state(self):
         """return copy of current estimate"""
-        return self.x.copy
+        return self.x.copy()
     def get_covariance(self):
         """return copy of convariance"""
         return self.P.copy()
