@@ -1,0 +1,34 @@
+{
+  "nominal": {
+    "trials": 3,
+    "successes": 3,
+    "success_rate": 1.0,
+    "mean_position_rmse_m": 0.0313701225905762,
+    "mean_final_docking_error_m": 0.05426911627847763,
+    "collision_events": 0
+  },
+  "noisy": {
+    "trials": 3,
+    "successes": 3,
+    "success_rate": 1.0,
+    "mean_position_rmse_m": 0.04126431260886132,
+    "mean_final_docking_error_m": 0.05030967835475223,
+    "collision_events": 0
+  },
+  "dropout": {
+    "trials": 3,
+    "successes": 3,
+    "success_rate": 1.0,
+    "mean_position_rmse_m": 0.009950256395743812,
+    "mean_final_docking_error_m": 0.055342747939544024,
+    "collision_events": 0
+  },
+  "disturbed": {
+    "trials": 3,
+    "successes": 3,
+    "success_rate": 1.0,
+    "mean_position_rmse_m": 0.013774091782646394,
+    "mean_final_docking_error_m": 0.054815803285083974,
+    "collision_events": 0
+  }
+}
