@@ -2,9 +2,9 @@ import numpy as np
 from frames import wrap_angle
 
 class GroundTruth:
-    def __init__(self, model, data, turtlebot3_waffle_pi: str = "base_footprint"):
+    def __init__(self, model, data, base_body: str = "base"):
         self._data = data
-        self._id = model.body(turtlebot3_waffle_pi).id
+        self._id = model.body(base_body).id
 
     @property
     def time(self) -> float:
