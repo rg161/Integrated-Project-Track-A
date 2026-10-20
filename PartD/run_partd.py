@@ -9,7 +9,7 @@ import time
 procs = []
 
 try:
-    scripts = ['estimation.py', 'Controller.py', 'trajectory.py']
+    scripts = ['PartC/Estimation.py', 'Controller.py', 'trajectory.py']
     for s in scripts:
         print('Starting', s)
         p = subprocess.Popen(['python3', s])
