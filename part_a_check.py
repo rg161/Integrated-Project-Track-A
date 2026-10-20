@@ -1,7 +1,24 @@
 import numpy as np
 from part_a.model import f, F_jac, G_jac, H_jac, h_range_bearing
 
+"""
+Part A: checks for differential-drive model in part_a/model.py
+
+- compare derived and numerical jacobians
+
+- controllability of system (both still and driving)
+
+- observability from range-bearing to a landmark m
+
+- observability with more than 1 landmark
+"""
+
+
 def num_jac(fnct, z, eps = 1e-6):
+    """
+    find num_jac at point z to check formulas
+    measure outputs, record w/ columns
+    """
     columns = []
     for i in range(len(z)):
         d = np.zeros(len(z)); d[i] = eps
@@ -9,6 +26,8 @@ def num_jac(fnct, z, eps = 1e-6):
         columns.append((fnct(z + d) - fnct(z - d)) / (2 * eps))
     return np.array(columns).T
 
+
+#test point!
 dt = 0.05 #seconds
 x0 = np.array([0.5, -0.2, 0.5])
 u0 = np.array([0.1, 0.3])
@@ -22,6 +41,7 @@ print("H error:", np.abs(H_jac(x0, m) - num_jac(lambda x: h_range_bearing(x, m),
 
 #check if robot is controllable
 #can v and w get to any pose
+#rank 3 if all state directions are achievable
 def ctrb(v):
     xs = np.zeros(3) #origin (0 heading)
     us = np.array([v, 0.0])
@@ -34,7 +54,10 @@ for v in [0.0, 0.15]: #Still/movement
     print(f"v = {v}: controllability rank {rank}, singular values {np.round(s, 8)}")
 
 #Check measurements from landmark location
+#if observable from m (landmark)
 def obs(x0, u, m, N=30):
+    """Singular values and right singular vectors of the stacked observability
+    matrix for one landmark m, starting at pose x0 with constant input u."""
     x = np.array(x0, float); Phi = np.eye(3); rows = []
     for _ in range(N):
         rows.append(H_jac(x, m) @ Phi)
@@ -48,6 +71,7 @@ pred = np.array([-(0 - m[1]), (0 - m[0]), 1.0]); pred /= np.linalg.norm(pred)
 print("null vector:", np.round(Vt[-1], 4), "predicted:", np.round(pred, 4)) 
 
 #Test 2nd landmark
+#same, add measurement to both landmarks per step
 def obs_multi(x0, u, landmarks, N = 30):
     x = np.array(x0, float); Phi = np.eye(3); rows = []
     for _ in range(N):
@@ -58,9 +82,10 @@ def obs_multi(x0, u, landmarks, N = 30):
     _, s, Vt = np.linalg.svd(np.vstack(rows))
     return s, Vt
 
+# Compare landmark layouts. Rank says whether the pose is recoverable at all
 cases = {
-    "one landmark":        [np.array([2.0, 1.0])],
-    "two, far apart":   [np.array([2.0, 1.0]), np.array([-1.0, 2.0])],
+    "one landmark": [np.array([2.0, 1.0])],
+    "two, far apart": [np.array([2.0, 1.0]), np.array([-1.0, 2.0])],
     "two, nearly aligned": [np.array([2.0, 1.0]), np.array([4.0, 2.0])],
     "two, close together": [np.array([2.0, 1.0]), np.array([2.1, 1.0])],
 }
