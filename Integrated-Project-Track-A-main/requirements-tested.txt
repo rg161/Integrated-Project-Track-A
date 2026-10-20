@@ -1,0 +1,7 @@
+# Direct dependencies used for the packaged Linux/Python 3.12 results.
+numpy==2.3.5
+scipy==1.17.0
+matplotlib==3.10.8
+mujoco==3.16.0
+opencv-contrib-python-headless==5.0.0.93
+pytest==9.1.1

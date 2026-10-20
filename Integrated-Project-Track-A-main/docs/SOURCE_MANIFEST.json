@@ -1,0 +1,44 @@
+{
+  "inputs": [
+    {
+      "filename": "Integrated-Project-Track-A-Environment.zip",
+      "size_bytes": 12192,
+      "sha256": "56beaa2efba1f3db234cdf603ef0131315aefc288ce2d5995fdac4759b1eda51"
+    },
+    {
+      "filename": "Integrated-Project-Track-A-Part-A.zip",
+      "size_bytes": 7765333,
+      "sha256": "cb7765db42dae0973059a1a3061e6c2499ead68d7eca3062d23f3a8612c15418"
+    },
+    {
+      "filename": "Integrated-Project-Track-A-Part-B.zip",
+      "size_bytes": 21153,
+      "sha256": "8566d643c21685118d43a3bfae79a9a52328c97bcbaa607b30cf6afed89f56f2"
+    },
+    {
+      "filename": "Integrated-Project-Track-A-PartC.zip",
+      "size_bytes": 3613,
+      "sha256": "8c570234c9913aa6d66f0215461e4678fa7c71fd1993706704c8e59484c36cf7"
+    },
+    {
+      "filename": "Integrated-Project-Track-A-PartD.zip",
+      "size_bytes": 6005,
+      "sha256": "119e4c5544f8a8f7dc9157c721abb76f2995416da36ab0e055d99857584cac0e"
+    },
+    {
+      "filename": "Integrated-Project-Track-A-TurtleBot.zip",
+      "size_bytes": 61978225,
+      "sha256": "afa4b6d88ca3b383f8150501e0bbf83fe64d2575b93e35550a8b58229ef88dbf"
+    },
+    {
+      "filename": "Sensors_Control_Integrated_Project-1(1).pdf",
+      "size_bytes": 141951,
+      "sha256": "8745edfbc13e0c4cbfbda74a7536e5c713f53ed0c2d7601502b04c6b81d32aa1"
+    }
+  ],
+  "integration_date": "2026-10-15",
+  "selected_robot": "TurtleBot3 Waffle Pi",
+  "omitted_assets": "Unrelated robot families and unused Burger/Waffle variants; original archives remain separate inputs.",
+  "visual_meshes_unchanged": true,
+  "source_code_snapshots": "reference_sources/"
+}
