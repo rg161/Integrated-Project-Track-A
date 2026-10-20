@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Run script for PartD nodes.
-Starts ekf.py, Controller.py and trajectory.py in background for local testing.
+Starts estimation.py, Controller.py and trajectory.py in background for local testing.
 """
 import subprocess
 import time
