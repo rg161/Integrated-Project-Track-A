@@ -1,101 +1,94 @@
-"""Numerical Jacobian checks and local controllability/observability evidence."""
-
-import argparse
-import json
-from pathlib import Path
 import numpy as np
-from track_a.model import f, F_jac, G_jac, H_jac, h_range_bearing
+from part_a.model import f, F_jac, G_jac, H_jac, h_range_bearing
+
+"""
+Part A: checks for differential-drive model in part_a/model.py
+
+- compare derived and numerical jacobians
+
+- controllability of system (both still and driving)
+
+- observability from range-bearing to a landmark m
+
+- observability with more than 1 landmark
+"""
 
 
-def numerical_jacobian(fun, z, epsilon=1e-6):
-    z = np.asarray(z, dtype=float)
-    return np.column_stack(
-        [
-            (
-                fun(z + np.eye(len(z))[i] * epsilon)
-                - fun(z - np.eye(len(z))[i] * epsilon)
-            )
-            / (2 * epsilon)
-            for i in range(len(z))
-        ]
-    )
+def num_jac(fnct, z, eps = 1e-6):
+    """
+    find num_jac at point z to check formulas
+    measure outputs, record w/ columns
+    """
+    columns = []
+    for i in range(len(z)):
+        d = np.zeros(len(z)); d[i] = eps
+
+        columns.append((fnct(z + d) - fnct(z - d)) / (2 * eps))
+    return np.array(columns).T
 
 
-def analyse():
-    dt = 0.05
-    x = np.array([0.5, -0.2, 0.5])
-    u = np.array([0.1, 0.3])
-    m = np.array([2.0, 1.0])
-    checks = {
-        "F": float(
-            np.max(
-                abs(F_jac(x, u, dt) - numerical_jacobian(lambda xx: f(xx, u, dt), x))
-            )
-        ),
-        "G": float(
-            np.max(
-                abs(G_jac(x, u, dt) - numerical_jacobian(lambda uu: f(x, uu, dt), u))
-            )
-        ),
-        "H": float(
-            np.max(
-                abs(
-                    H_jac(x, m)
-                    - numerical_jacobian(lambda xx: h_range_bearing(xx, m), x)
-                )
-            )
-        ),
-    }
-    result = {"jacobian_max_errors": checks, "controllability": {}, "observability": {}}
-    for v in [0.0, 0.15]:
-        A = F_jac(np.zeros(3), [v, 0], dt)
-        B = G_jac(np.zeros(3), [v, 0], dt)
-        C = np.hstack([B, A @ B, A @ A @ B])
-        s = np.linalg.svd(C, compute_uv=False)
-        result["controllability"][str(v)] = {
-            "rank": int(np.linalg.matrix_rank(C)),
-            "singular_values": s.tolist(),
-        }
-    for name, landmarks in {
-        "single_point": [[2.0, 1.0]],
-        "two_points": [[2.0, 1.0], [-1.0, 2.0]],
-        "two_close_points": [[2.0, 1.0], [2.1, 1.0]],
-    }.items():
-        xx = np.array([0.0, 0.0, 0.3])
-        uu = np.array([0.15, 0.3])
-        Phi = np.eye(3)
-        rows = []
-        for _ in range(30):
-            rows.extend([H_jac(xx, m) @ Phi for m in landmarks])
-            Phi = F_jac(xx, uu, dt) @ Phi
-            xx = f(xx, uu, dt)
-        s = np.linalg.svd(np.vstack(rows), compute_uv=False)
-        result["observability"][name] = {
-            "rank": int(np.sum(s > 1e-8)),
-            "singular_values": s.tolist(),
-        }
-    result["observability"]["oriented_marker_full_pose"] = {
-        "rank": 3,
-        "measurement_jacobian": "I_3",
-    }
-    result["interpretation"] = (
-        "Ranks describe the stated local linearisation. A point landmark's range/bearing has "
-        "a rotation-about-landmark gauge; the integrated camera uses the full pose of an "
-        "oriented, mapped marker. At rest the instantaneous linear model has rank 2; "
-        "this does not imply the nonlinear vehicle cannot manoeuvre laterally."
-    )
-    return result
+#test point!
+dt = 0.05 #seconds
+x0 = np.array([0.5, -0.2, 0.5])
+u0 = np.array([0.1, 0.3])
+m = np.array([2.0, 1.0])
 
+#check if jacobians are correct (1e-8 or less)
+#compare model calculations with numerical
+print("F error:", np.abs(F_jac(x0, u0, dt) - num_jac(lambda x: f(x, u0, dt), x0)).max())
+print("G error:", np.abs(G_jac(x0, u0, dt) - num_jac(lambda u: f(x0, u, dt), u0)).max())
+print("H error:", np.abs(H_jac(x0, m) - num_jac(lambda x: h_range_bearing(x, m), x0)).max())
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
-        "--output",
-        type=Path,
-        default=Path(__file__).resolve().parent / "results/model_analysis.json",
-    )
-    args = parser.parse_args()
-    result = analyse()
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(result, indent=2) + "\n")
-    print(json.dumps(result, indent=2))
+#check if robot is controllable
+#can v and w get to any pose
+#rank 3 if all state directions are achievable
+def ctrb(v):
+    xs = np.zeros(3) #origin (0 heading)
+    us = np.array([v, 0.0])
+    A, B = F_jac(xs, us, dt), G_jac(xs, us, dt)
+    C = np.hstack([B, A @ B, A @ A @ B])
+    return np.linalg.matrix_rank(C), np.linalg.svd(C, compute_uv = False)
+
+for v in [0.0, 0.15]: #Still/movement
+    rank, s = ctrb(v)
+    print(f"v = {v}: controllability rank {rank}, singular values {np.round(s, 8)}")
+
+#Check measurements from landmark location
+#if observable from m (landmark)
+def obs(x0, u, m, N=30):
+    """Singular values and right singular vectors of the stacked observability
+    matrix for one landmark m, starting at pose x0 with constant input u."""
+    x = np.array(x0, float); Phi = np.eye(3); rows = []
+    for _ in range(N):
+        rows.append(H_jac(x, m) @ Phi)
+        Phi = F_jac(x, u, dt) @ Phi
+        x = f(x, u, dt)
+    _, s, Vt = np.linalg.svd(np.vstack(rows))
+    return s, Vt
+
+s, Vt = obs([0, 0, 0.3], [0.15, 0.3], m)
+pred = np.array([-(0 - m[1]), (0 - m[0]), 1.0]); pred /= np.linalg.norm(pred)
+print("null vector:", np.round(Vt[-1], 4), "predicted:", np.round(pred, 4)) 
+
+#Test 2nd landmark
+#same, add measurement to both landmarks per step
+def obs_multi(x0, u, landmarks, N = 30):
+    x = np.array(x0, float); Phi = np.eye(3); rows = []
+    for _ in range(N):
+        for mk in landmarks:
+            rows.append(H_jac(x, mk) @ Phi)
+        Phi = F_jac(x, u, dt) @ Phi
+        x = f(x, u, dt)
+    _, s, Vt = np.linalg.svd(np.vstack(rows))
+    return s, Vt
+
+# Compare landmark layouts. Rank says whether the pose is recoverable at all
+cases = {
+    "one landmark": [np.array([2.0, 1.0])],
+    "two, far apart": [np.array([2.0, 1.0]), np.array([-1.0, 2.0])],
+    "two, nearly aligned": [np.array([2.0, 1.0]), np.array([4.0, 2.0])],
+    "two, close together": [np.array([2.0, 1.0]), np.array([2.1, 1.0])],
+}
+for name, lms in cases.items():
+    s, Vt = obs_multi([0, 0, 0.3], [0.15, 0.3], lms)
+    print(f"{name}: rank {int((s > 1e-8).sum())}, singular values {np.round(s, 6)}")
