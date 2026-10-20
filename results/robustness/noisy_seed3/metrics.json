@@ -1,0 +1,32 @@
+{
+  "trial": "noisy",
+  "seed": 3,
+  "termination": "docked",
+  "controller_declared_docked": true,
+  "success": true,
+  "duration_s": 21.64999999999888,
+  "samples": 434,
+  "position_rmse_m": 0.04785144237048183,
+  "heading_rmse_deg": 2.2347671453019315,
+  "odometry_position_rmse_m": 0.013997296321810924,
+  "reference_tracking_rmse_m": 0.2592673490905653,
+  "final_docking_error_m": 0.0521174634906257,
+  "final_heading_error_deg": 4.549905620629882,
+  "mean_nees": 9.665596946555421,
+  "two_sigma_coverage_xyz": [
+    1.0,
+    0.631336405529954,
+    0.9262672811059908
+  ],
+  "control_effort_v2_dt": 0.5179307524407939,
+  "control_effort_omega2_dt": 4.29061373749954,
+  "collision_events": 0,
+  "camera_updates": 40,
+  "camera_rejections": 2,
+  "success_thresholds": {
+    "position_m": 0.08,
+    "heading_deg": 8,
+    "collision_events": 0,
+    "requires_recent_marker": true
+  }
+}
