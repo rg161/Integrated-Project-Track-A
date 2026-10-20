@@ -5,7 +5,7 @@ from dataclasses import replace
 from pathlib import Path
 import numpy as np
 import pytest
-from track_a.config import Config
+from track_a.config import Config, sample_start_pose
 from track_a.frames import (
     FrameTree,
     Transform,
@@ -176,3 +176,24 @@ def test_control_estimation_and_sensor_processing_cannot_read_simulator_truth():
                     "xquat",
                     "sensordata",
                 }, name
+
+
+def test_random_start_is_seed_reproducible_and_inside_safe_region():
+    c = Config()
+    a = sample_start_pose(c, np.random.default_rng(123))
+    b = sample_start_pose(c, np.random.default_rng(123))
+    np.testing.assert_allclose(a, b)
+    assert c.start_x_range[0] <= a[0] <= c.start_x_range[1]
+    assert c.start_y_range[0] <= a[1] <= c.start_y_range[1]
+    assert a[2] == c.start[2]
+    assert not c.in_docking_zone(a)
+
+
+def test_docking_zone_membership_contains_goal_and_rejects_start():
+    c = Config()
+    assert c.in_docking_zone(c.goal)
+    assert not c.in_docking_zone(c.start)
+    xmin, xmax, ymin, ymax = c.docking_zone_bounds
+    assert c.in_docking_zone([xmin, ymin, 0.0])
+    assert c.in_docking_zone([xmax, ymax, 0.0])
+    assert not c.in_docking_zone([xmin - 1e-3, 0.0, 0.0])

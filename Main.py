@@ -25,6 +25,11 @@ def main(argv=None):
     )
     parser.add_argument("--seed", type=int, default=1)
     parser.add_argument(
+        "--fixed-start",
+        action="store_true",
+        help="Use Config.start instead of the default seed-reproducible random x/y start",
+    )
+    parser.add_argument(
         "--duration", type=float, default=100.0, help="Maximum simulated seconds"
     )
     parser.add_argument("--output", type=Path, help="Output directory")
@@ -37,7 +42,7 @@ def main(argv=None):
     from track_a.config import Config, TRIALS, ROOT
     from track_a.runner import run
 
-    config = replace(Config(), max_duration=args.duration)
+    config = replace(Config(), max_duration=args.duration, random_start=not args.fixed_start)
     output = args.output or ROOT / "results" / f"{args.scenario}_seed{args.seed}"
     try:
         metrics = run(

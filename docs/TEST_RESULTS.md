@@ -1,5 +1,7 @@
 # Verification results
 
+> **Verification note for the repaired archive:** the numerical results below were already present in the supplied project and describe a prior integrated build. The repaired source package has been re-checked with 37 non-MuJoCo regression tests; the two physical MuJoCo/rendering tests must be rerun in the team virtual environment before treating the historical numbers below as current evidence. See `docs/APPLIED_FIXES.md`.
+
 Generated during integration on 15 October 2026 (UTC). These are simulation measurements from the included code. They are not hardware results or an assurance of performance on other scenes.
 
 ## Automated checks

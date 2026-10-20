@@ -1,35 +1,66 @@
-# Integrated-Project-Track-A
-Mobile Robot Track: The turtlebot, equipped with 2D lidar and camera (MuJoCo), will navigate an obstacle-filled room using Lidar. The turtlebot must also visually dock with the ArUco-marked charging station. 
+# Integrated Project — Track A
 
-PART A:
+TurtleBot3 Waffle Pi visual waypoint navigation for 41014 Sensors and Control in Mechatronics Systems.
 
-PARAMETERS
-Nominal wheel radius = 0.033m (from geometry)
-Nominal wheel seperation = 0.288m
-Calculated wheel radius, from XML = 0.0283m
-Calculated wheel seperation, from XML = 0.353m
-dt = 0.05s
+The integrated runtime is in `track_a/`. The older `PartA/`, `PartB/`, `PartC/`, `PartD/` and `reference_sources/` folders are retained as provenance/compatibility material; they are **not** separate applications.
 
-Wheel radius at different wheel speeds.
-1.5rad/s -> 0.0313m
-3rad/s -> 0.0283m
-4.5rad/s -> 0.0281m
-At slower speeds, the robot travels a further distance per wheel turn, meaning the wheels have a larger radius.
+## Runtime pipeline
 
-OBSERVABILITY (starting with [0, 0, 0.3], u = [0.15, 0.3], 30 steps)
-Landmarks                   Rank                Singular values
-One                         2                   0.00
-Two, far away               3                   4.99
-Two, nearly aligned         3                   0.85
-Two, close together         3                   0.09
+`MuJoCo encoders -> EKF prediction -> rendered ArUco camera -> EKF correction -> estimated pose -> LiDAR mapping/A* -> state-feedback controller -> wheel commands -> MuJoCo`
 
-CONTROLLABILITY
-Speed (v)                   Rank               Singular Values
-0m/s                        2                  0.0866, 0.0866, 0
-0.15m/s                     3                  0.0866, 0.0866, 5.3e-4
+Ground truth is isolated to evaluation/calibration and is never passed to the estimator, planner or controller.
 
-MUJOCO VALIDATION
-Final position error:   nominal parameter (0.209m), Calculated parameter (0.044m)
-Max heading error:      nominal parameter (14.2 deg), Calculated parameter (4.8 deg)
-Final heading error:    nominal parameter(1.1 deg), Calculated parameter (0.7 deg)
+## Setup (Windows PowerShell)
 
+```powershell
+cd "C:\Users\steph\OneDrive\Desktop\sensors and cotrol\Integrated-Project-Track-A-main"
+py -m venv .venv
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+& ".\.venv\Scripts\Activate.ps1"
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+Select `.venv\Scripts\python.exe` as the VS Code Python interpreter.
+
+## Run
+
+```powershell
+python main.py --headless --scenario nominal --duration 65
+# Use the original deterministic start only when debugging:
+python main.py --headless --scenario nominal --duration 65 --fixed-start
+python main.py --headless --scenario no_camera --duration 25
+python main.py
+```
+
+## Tests
+
+```powershell
+python -m pytest -q
+```
+
+## Important files
+
+- `track_a/config.py` — one shared set of robot, sensor and controller parameters.
+- `track_a/model.py` — midpoint differential-drive model and Jacobians.
+- `track_a/frames.py` — world/base/camera/LiDAR/marker transforms.
+- `track_a/noise.py` — LiDAR cleaning, ArUco gating and encoder covariance.
+- `track_a/estimation.py` — Part C EKF using encoder prediction and camera correction.
+- `track_a/sensing.py` — rendered ArUco detection and PnP pose recovery.
+- `track_a/planning.py` — LiDAR occupancy map and inflated-grid A*.
+- `track_a/controller.py` — estimated-state path tracking and visual docking.
+- `track_a/simulator.py` — MuJoCo robot, encoders, LiDAR rays, RGB camera and disturbance scenarios.
+- `track_a/runner.py` — the single end-to-end integration loop.
+- `track_a/evaluation.py` — truth-only metrics and output plots/logs.
+
+See `docs/DESIGN.md` and `docs/INTEGRATION.md` for the reasoning behind the model, frames, EKF, controller and integration fixes.
+
+## Random start and charging-zone box
+
+Normal runs now sample a reproducible random x/y start on the obstacle-free left side of the room.
+The `--seed` controls the start as well as sensor noise/dropout, so the same seed repeats exactly.
+Use `--fixed-start` to return to `Config.start` for debugging.
+
+A green visual-only rectangle marks the charging acceptance zone in front of the station.
+Its bounds are configured by `docking_zone_center` and `docking_zone_half_size` in `track_a/config.py`.
+Runtime status prints `dock_box=IN/OUT`, and `metrics.json` records estimated and true zone membership.

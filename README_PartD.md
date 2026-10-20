@@ -1,19 +1,10 @@
-# PartD helper notes
+# Part D — integrated controller
 
-This branch adds a minimal development scaffold for the Part D controller:
+The original ROS 1 controller has been replaced by the runtime controller in `track_a/controller.py`.
+It receives the Part C EKF estimate directly from `track_a/runner.py`; no ROS topics or subprocess launcher are required.
 
-- ekf.py: simple EKF stub that relays /odom -> /ekf/pose
-- trajectory.py: publishes /reference_pose waypoints
-- run_partd.py: starts the demo nodes together
-- metrics.py: computes tracking RMSE from /tmp/controller_log.csv
+Run the complete project with:
 
-Dependencies:
-- ROS 1 with rospy
-- /odom topic should exist from the simulation or odometry source
-- Controller.py must be launched with a matching /cmd_vel topic and reference topic
-
-To run:
-1. Start roscore
-2. Start your simulation or odom publisher
-3. python3 run_partd.py
-4. python3 metrics.py /tmp/controller_log.csv
+```bash
+python main.py --headless --scenario nominal --duration 65
+```

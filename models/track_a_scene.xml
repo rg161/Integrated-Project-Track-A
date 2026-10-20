@@ -1,0 +1,98 @@
+<mujoco model="integrated_waffle_pi">
+  <compiler angle="radian" meshdir="robotis_tb3/assets/" />
+  <option cone="elliptic" impratio="10" timestep="0.002" integrator="Euler" gravity="0 0 -9.81" />
+  <asset>
+    <material name="grey" rgba="0.3 0.3 0.3 1" />
+    <material name="black" rgba="0.1 0.1 0.1 1" />
+    <mesh name="waffle_pi_base" file="waffle_pi_base.stl" scale="0.001 0.001 0.001" />
+    <mesh name="left_tire" file="left_tire.stl" scale="0.001 0.001 0.001" />
+    <mesh name="right_tire" file="right_tire.stl" scale="0.001 0.001 0.001" />
+    <mesh name="lds" file="lds.stl" scale="0.001 0.001 0.001" />
+    <material name="floor_mat" rgba="0.75 0.75 0.75 1" />
+    <material name="obstacle_mat" rgba="0.45 0.30 0.18 1" />
+    <material name="white_marker" rgba="1 1 1 1" />
+    <material name="black_marker" rgba="0.01 0.01 0.01 1" />
+    <material name="dock_mat" rgba="0.2 0.2 0.2 1" />
+    <material name="dock_zone_mat" rgba="0.1 0.85 0.2 0.85" />
+  </asset>
+  <default>
+    <default class="wheel">
+      <joint limited="false" frictionloss="0.002" armature="0.0002" />
+      <velocity kv="0.1" ctrlrange="-7.88 7.88" ctrllimited="true" />
+      <default class="wheel_left">
+        <joint axis="0 0 1" />
+      </default>
+      <default class="wheel_right">
+        <joint axis="0 0 1" />
+      </default>
+    </default>
+    <default class="visual">
+      <geom type="mesh" contype="0" conaffinity="0" density="0" group="2" />
+    </default>
+    <default class="collision">
+      <geom group="3" type="mesh" />
+    </default>
+  </default>
+  <worldbody>
+    <light name="key" directional="true" pos="0 0 4" dir="0 0 -1" diffuse="0.9 0.9 0.9" ambient="0.35 0.35 0.35" />
+    <geom name="floor" type="plane" size="5 5 0.1" pos="0 0 0" material="floor_mat" friction="1.0 0.005 0.0001" group="0" />
+    <geom name="wall_left" type="box" pos="-2.28 0 0.25" size="0.04 1.65 0.25" material="obstacle_mat" group="1" />
+    <geom name="wall_right" type="box" pos="2.28 0 0.25" size="0.04 1.65 0.25" material="obstacle_mat" group="1" />
+    <geom name="wall_bottom" type="box" pos="0 -1.68 0.25" size="2.32 0.04 0.25" material="obstacle_mat" group="1" />
+    <geom name="wall_top" type="box" pos="0 1.68 0.25" size="2.32 0.04 0.25" material="obstacle_mat" group="1" />
+    <geom name="obstacle_a" type="box" pos="-0.25 -0.31 0.22" size="0.20 0.28 0.22" material="obstacle_mat" group="1" />
+    <geom name="obstacle_b" type="box" pos="0.42 0.72 0.20" size="0.24 0.18 0.20" material="obstacle_mat" group="1" />
+    <geom name="charging_station" type="box" pos="1.72 0 0.18" size="0.08 0.28 0.18" material="dock_mat" group="1" />
+    <!-- Visual-only charging-zone perimeter. Runtime config sets exact position/size. -->
+    <geom name="dock_zone_xmin" type="box" pos="1.00 0 0.008" size="0.012 0.16 0.004" material="dock_zone_mat" group="2" contype="0" conaffinity="0" />
+    <geom name="dock_zone_xmax" type="box" pos="1.24 0 0.008" size="0.012 0.16 0.004" material="dock_zone_mat" group="2" contype="0" conaffinity="0" />
+    <geom name="dock_zone_ymin" type="box" pos="1.12 -0.16 0.008" size="0.12 0.012 0.004" material="dock_zone_mat" group="2" contype="0" conaffinity="0" />
+    <geom name="dock_zone_ymax" type="box" pos="1.12 0.16 0.008" size="0.12 0.012 0.004" material="dock_zone_mat" group="2" contype="0" conaffinity="0" />
+    <geom name="aruco_board" type="box" pos="1.603 0 0.24" size="0.004 0.15 0.15" material="white_marker" group="2" contype="0" conaffinity="0" />
+    <geom name="aruco_backing" type="box" pos="1.595 0.0 0.24" size="0.004 0.12 0.12" material="black_marker" group="2" contype="0" conaffinity="0" />
+    <geom name="aruco_white_1_1" type="box" pos="1.5905 0.06 0.3" size="0.0008 0.0202 0.0202" material="white_marker" group="2" contype="0" conaffinity="0" />
+    <geom name="aruco_white_1_2" type="box" pos="1.5905 0.02 0.3" size="0.0008 0.0202 0.0202" material="white_marker" group="2" contype="0" conaffinity="0" />
+    <geom name="aruco_white_2_2" type="box" pos="1.5905 0.02 0.26" size="0.0008 0.0202 0.0202" material="white_marker" group="2" contype="0" conaffinity="0" />
+    <geom name="aruco_white_3_1" type="box" pos="1.5905 0.06 0.22" size="0.0008 0.0202 0.0202" material="white_marker" group="2" contype="0" conaffinity="0" />
+    <geom name="aruco_white_3_2" type="box" pos="1.5905 0.02 0.22" size="0.0008 0.0202 0.0202" material="white_marker" group="2" contype="0" conaffinity="0" />
+    <geom name="aruco_white_3_3" type="box" pos="1.5905 -0.02 0.22" size="0.0008 0.0202 0.0202" material="white_marker" group="2" contype="0" conaffinity="0" />
+    <geom name="aruco_white_3_4" type="box" pos="1.5905 -0.06 0.22" size="0.0008 0.0202 0.0202" material="white_marker" group="2" contype="0" conaffinity="0" />
+    <geom name="aruco_white_4_3" type="box" pos="1.5905 -0.02 0.18" size="0.0008 0.0202 0.0202" material="white_marker" group="2" contype="0" conaffinity="0" />
+    <body name="base" pos="0 0 0">
+      <inertial pos="-0.064 0 0.06" mass="1.8" diaginertia="0.01 0.01 0.008" />
+      <joint type="free" name="base_joint" />
+      <geom pos="-0.064 0 0.01" mesh="waffle_pi_base" material="black" class="visual" />
+      <geom size="0.005" pos="-0.177 -0.064 0.005" type="sphere" material="grey" friction="0.0001 0.0001 0.0001" solref="0.02 1" solimp="0.95 0.99 0.001" condim="1" priority="1" />
+      <geom size="0.005" pos="-0.177 0.064 0.005" type="sphere" material="grey" friction="0.0001 0.0001 0.0001" solref="0.02 1" solimp="0.95 0.99 0.001" condim="1" priority="1" />
+      <geom pos="-0.049 0 0.1255" mesh="lds" material="black" class="visual" />
+      <geom size="0.0075 0.015 0.0135" pos="0.078 0 0.107" type="box" material="grey" />
+      <body name="wheel_left" pos="0 0.144 0.033" quat="0.7071067811865476 -0.7071067811865476 0 0">
+        <inertial pos="0 0 0" quat="-0.000890159 0.706886 0.000889646 0.707326" mass="0.0284989" diaginertia="2.07126e-05 1.11924e-05 1.11756e-05" />
+        <joint name="wheel_left" class="wheel_left" />
+        <geom quat="0.707388 0.706825 0 0" mesh="left_tire" material="grey" class="visual" />
+        <geom name="wheel_left_contact" type="ellipsoid" size="0.033 0.033 0.009" friction="1.0 0.005 0.0001" condim="3" rgba="0.1 0.1 0.1 1" group="3" />
+      </body>
+      <body name="wheel_right" pos="0 -0.144 0.033" quat="0.7071067811865476 -0.7071067811865476 0 0">
+        <inertial pos="0 0 0" quat="-0.000890159 0.706886 0.000889646 0.707326" mass="0.0284989" diaginertia="2.07126e-05 1.11924e-05 1.11756e-05" />
+        <joint name="wheel_right" class="wheel_right" />
+        <geom quat="0.707388 0.706825 0 0" mesh="right_tire" material="grey" class="visual" />
+        <geom name="wheel_right_contact" type="ellipsoid" size="0.033 0.033 0.009" friction="1.0 0.005 0.0001" condim="3" rgba="0.1 0.1 0.1 1" group="3" />
+      </body>
+      <geom name="chassis_collision" type="box" pos="-0.055 0 0.055" size="0.120 0.125 0.025" rgba="0 0 0 0" group="3" />
+      <camera name="front_camera" pos="0.078 0 0.18" xyaxes="0 -1 0 0 0 1" fovy="58" />
+      <site name="lidar" pos="-0.049 0 0.17" size="0.004" rgba="1 0 0 1" />
+    </body>
+  </worldbody>
+  <actuator>
+    <velocity class="wheel_left" name="wheel_left" joint="wheel_left" />
+    <velocity class="wheel_right" name="wheel_right" joint="wheel_right" />
+  </actuator>
+  <contact>
+    <exclude body1="base" body2="wheel_left" />
+    <exclude body1="base" body2="wheel_right" />
+  </contact>
+  <sensor>
+    <jointpos name="encoder_left" joint="wheel_left" />
+    <jointpos name="encoder_right" joint="wheel_right" />
+  </sensor>
+</mujoco>

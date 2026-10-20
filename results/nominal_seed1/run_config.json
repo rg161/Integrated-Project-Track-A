@@ -23,8 +23,6 @@
     "camera_height": 360,
     "camera_fovy": 58.0,
     "corner_sigma": 0.25,
-    "encoder_sigma": 0.0005,
-    "odom_k": 0.0002,
     "marker_side": 0.24,
     "marker_id": 7,
     "marker_pos": [
@@ -42,16 +40,36 @@
       0.0,
       0.17
     ],
+    "encoder_sigma": 0.0005,
+    "odom_k": 0.0002,
     "start": [
       -1.45,
       -0.7,
       0.0
+    ],
+    "random_start": true,
+    "start_x_range": [
+      -1.75,
+      -1.15
+    ],
+    "start_y_range": [
+      -1.1,
+      1.1
     ],
     "goal": [
       1.12,
       0.0,
       0.0
     ],
+    "docking_zone_center": [
+      1.12,
+      0.0
+    ],
+    "docking_zone_half_size": [
+      0.12,
+      0.16
+    ],
+    "docking_zone_line_width": 0.012,
     "bounds": [
       -2.2,
       2.2,
@@ -61,7 +79,7 @@
     "goal_position_tolerance": 0.055,
     "goal_heading_tolerance": 0.08726646259971647,
     "camera_max_age": 0.75,
-    "max_duration": 100.0
+    "max_duration": 65.0
   },
   "trial": {
     "name": "nominal",
@@ -78,15 +96,5 @@
     ],
     "obstacle_shift": 0.0
   },
-  "seed": 1,
-  "versions": {
-    "python": "3.14.6",
-    "numpy": "2.3.5",
-    "scipy": "1.17.0",
-    "mujoco": "3.16.0",
-    "opencv": "5.0.0",
-    "matplotlib": "3.10.8"
-  },
-  "camera": "rendered RGB + ArUco + PnP; no synthetic pose shortcut",
-  "initial_pose": "configured prior, not measured simulator pose"
+  "seed": 1
 }
