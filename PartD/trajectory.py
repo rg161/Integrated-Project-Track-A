@@ -11,8 +11,7 @@ import time
 procs = []
 
 try:
-    # Start the required helper nodes for local testing.
-    # Note: the estimation node is expected to be in the PartC folder.
+    """Start the required helper nodes for local testing."""
     scripts = ['PartC/Estimation.py', 'Controller.py', 'trajectory.py']
     for s in scripts:
         print('Starting', s)
@@ -22,10 +21,10 @@ try:
 
     print('All nodes started. Press Ctrl-C to stop.')
 
-    # Keep the launcher alive until the user stops it.
     while True:
         time.sleep(1)
 except KeyboardInterrupt:
+    """Shut down launched processes on Ctrl-C."""
     print('Shutting down...')
     for p in procs:
         try:
