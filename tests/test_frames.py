@@ -14,8 +14,14 @@ R_B_CMJ_FORWARD = np.array([[0, 0, -1], [-1, 0, 0], [0, 1, 0]], float)
 
 
 def R_to_quat_wxyz(R):
+    """
+    Test only helper function
+    Convert a 3x3 rotation matrix in a quaternion W,X,Y,Z format
+    Used as build_static_frames() expects camera orientation as a quaternion but instead we difin this test using a rotation matrix.
+    """
     # Test-only helper (valid away from 180 deg rotations)
     w = np.sqrt(max(0, 1 + np.trace(R))) / 2
+    # Cakcukate the x,y,z quaternion compnents from the off diagonal elements of the rotation matrix
     return [
         w,
         (R[2, 1] - R[1, 2]) / (4 * w),
@@ -25,14 +31,30 @@ def R_to_quat_wxyz(R):
 
 
 def make_tree(base=(1, 0, 0)):
+    """
+    Create a standard frameTree use by several tests
+    W = world frame
+    B = robot 
+    C = camera
+    L = Lidar
+    M = aruco marker frame
+
+    parameters: world frame
+
+    Returns frame tree
+    """
     tree = FrameTree()
     build_static_frames(
         tree,
+        # camera mounted 7cm forward, 0cm sideways, 10cm above robot refrence point
         cam_pos_B=[0.07, 0, 0.1],
+        #Convert known camera rotation matrix into quaternion form
         cam_quat_B_wxyz=R_to_quat_wxyz(R_B_CMJ_FORWARD),
+        # LIDAR mounting position 3cm behind, centred and 17cm high
         lidar_pos_B=[-0.03, 0, 0.17],
         marker_pos_W=[2, 0, 0.1],
     )
+    # set current robot pose in world
     tree.set_base_pose(*base)
     return tree
 
