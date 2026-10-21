@@ -1,0 +1,75 @@
+#!/usr/bin/env python3
+import rospy
+from geometry_msgs.msg import PoseStamped
+import math
+
+"""Waypoint publisher for testing the tracking controller.
+
+This node publishes a sequence of reference poses to /reference_pose at a fixed
+rate. It is useful for simulating or testing a controller before integrating it
+with a full planning system.
+"""
+
+# ---------------------------------------------------------------------------
+# Default waypoint list.
+# Each waypoint is a tuple of (x, y, theta) in meters and radians.
+# The controller can follow these reference poses sequentially, cycling through
+# the list continuously.
+# ---------------------------------------------------------------------------
+DEFAULT_WAYPOINTS = [
+    (1.0, 0.0, 0.0),
+    (1.8, 0.2, 0.0),
+    (2.0, 0.0, 0.0),
+]
+
+
+class WaypointPublisher:
+    def __init__(self):
+        # Initialize the ROS node for the waypoint publisher.
+        rospy.init_node('waypoint_publisher')
+
+        # Publish PoseStamped messages to the reference pose topic.
+        self.pub = rospy.Publisher('/reference_pose', PoseStamped, queue_size=1)
+
+        # Control the publish rate.
+        rate_hz = rospy.get_param('~rate', 1.0)
+        self.rate = rospy.Rate(rate_hz)
+
+        # Read the waypoint list from the ROS parameter server; default to the
+        # list above if no parameter is set.
+        self.waypoints = rospy.get_param('/partd_waypoints', DEFAULT_WAYPOINTS)
+        rospy.loginfo(f'waypoint_publisher: publishing {len(self.waypoints)} waypoints at {rate_hz} Hz')
+
+    def run(self):
+        # Keep cycling through the waypoint list.
+        idx = 0
+        while not rospy.is_shutdown():
+            x, y, theta = self.waypoints[idx % len(self.waypoints)]
+
+            # Build a PoseStamped message for the current waypoint.
+            msg = PoseStamped()
+            msg.header.stamp = rospy.Time.now()
+            msg.header.frame_id = 'map'
+            msg.pose.position.x = float(x)
+            msg.pose.position.y = float(y)
+
+            # Convert yaw angle to a quaternion for ROS orientation.
+            qz = math.sin(theta / 2.0)
+            qw = math.cos(theta / 2.0)
+            msg.pose.orientation.z = qz
+            msg.pose.orientation.w = qw
+
+            # Publish the waypoint and advance to the next one.
+            self.pub.publish(msg)
+            idx += 1
+            self.rate.sleep()
+
+
+if __name__ == '__main__':
+    try:
+        # Start the waypoint publisher and keep it running until ROS shuts down.
+        node = WaypointPublisher()
+        node.run()
+    except rospy.ROSInterruptException:
+        # ROS interruption is expected during shutdown.
+        pass

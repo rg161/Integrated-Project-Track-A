@@ -1,50 +1,40 @@
 #!/usr/bin/env python3
-import rospy
-from geometry_msgs.msg import PoseStamped
-import math
+"""Convenience launcher for the Part D ROS nodes.
 
+This script starts the estimation, controller, and trajectory publisher nodes in
+parallel so they can be tested together locally without launching each node by
+hand.
 """
-Simple waypoint publisher for testing the controller.
-Publishes PoseStamped messages to /reference_pose at a configurable rate.
-Waypoints can be set via the ROS parameter /partd_waypoints (list of tuples)
-Default waypoints: approach point then docking pose.
-"""
+import subprocess
+import time
 
-DEFAULT_WAYPOINTS = [
-    (1.0, 0.0, 0.0),
-    (1.8, 0.2, 0.0),
-    (2.0, 0.0, 0.0),
-]
+procs = []
 
-class WaypointPublisher:
-    def __init__(self):
-        rospy.init_node('waypoint_publisher')
-        self.pub = rospy.Publisher('/reference_pose', PoseStamped, queue_size=1)
-        rate_hz = rospy.get_param('~rate', 1.0)
-        self.rate = rospy.Rate(rate_hz)
-        self.waypoints = rospy.get_param('/partd_waypoints', DEFAULT_WAYPOINTS)
-        rospy.loginfo(f'waypoint_publisher: publishing {len(self.waypoints)} waypoints at {rate_hz} Hz')
+try:
+    # Start the required helper nodes for local testing.
+    # Note: the estimation node is expected to be in the PartC folder.
+    scripts = ['PartC/Estimation.py', 'Controller.py', 'trajectory.py']
+    for s in scripts:
+        print('Starting', s)
+        p = subprocess.Popen(['python3', s])
+        procs.append(p)
+        time.sleep(0.5)
 
-    def run(self):
-        idx = 0
-        while not rospy.is_shutdown():
-            x, y, theta = self.waypoints[idx % len(self.waypoints)]
-            msg = PoseStamped()
-            msg.header.stamp = rospy.Time.now()
-            msg.header.frame_id = 'map'
-            msg.pose.position.x = float(x)
-            msg.pose.position.y = float(y)
-            qz = math.sin(theta / 2.0)
-            qw = math.cos(theta / 2.0)
-            msg.pose.orientation.z = qz
-            msg.pose.orientation.w = qw
-            self.pub.publish(msg)
-            idx += 1
-            self.rate.sleep()
+    print('All nodes started. Press Ctrl-C to stop.')
 
-if __name__ == '__main__':
-    try:
-        node = WaypointPublisher()
-        node.run()
-    except rospy.ROSInterruptException:
-        pass
+    # Keep the launcher alive until the user stops it.
+    while True:
+        time.sleep(1)
+except KeyboardInterrupt:
+    print('Shutting down...')
+    for p in procs:
+        try:
+            p.terminate()
+        except Exception:
+            pass
+    time.sleep(1)
+    for p in procs:
+        try:
+            p.kill()
+        except Exception:
+            pass
