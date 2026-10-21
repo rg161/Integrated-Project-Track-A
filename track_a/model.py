@@ -1,9 +1,24 @@
-"""Shared discrete differential-drive/unicycle model used by Part A and EKF."""
+"""
+Shared discrete differential-drive/unicycle model used by Part A and EKF.
+
+note:
+state -> x = [x, y, theta] position and heading 
+input -> u = [v, w] speed and turning speed
+
+"""
 
 import numpy as np
 
-R_WHEEL = 0.033
-L_WHEEL = 0.288
+R_WHEEL = 0.033 #wheel radius (m) measured, at 3rad/s
+"""
+XML gave R = 0.033m, L = 0.288m, 
+correct calculations found as simulated bot had smaller wheels, larger seperation
+"""
+L_WHEEL = 0.288 #wheel separation (m) measured
+"""
+XML gave R = 0.033m, L = 0.288m, 
+correct calculations found as simulated bot had smaller wheels, larger seperation
+"""
 
 
 def wrap(a):
@@ -17,7 +32,10 @@ def wheels_to_v_w(wl, wr, r=R_WHEEL, L=L_WHEEL):
 
 
 def v_w_to_wheels(v, w, r=R_WHEEL, L=L_WHEEL, limit=None):
-    """Body command -> wheel rates, preserving curvature if saturated."""
+    """
+    Body command -> wheel rates, preserving curvature if saturated.
+    convert wheel speeds (rad/s) to linear and angular velocity (m/s, rad/s)
+    """
     wl = (v - 0.5 * L * w) / r
     wr = (v + 0.5 * L * w) / r
     wheels = np.array([wl, wr], dtype=float)
@@ -32,6 +50,7 @@ def f(x, u, dt):
     """Midpoint discrete unicycle model."""
     x = np.asarray(x, dtype=float)
     v, w = np.asarray(u, dtype=float)
+    #input is linear and angular velocity
     th_mid = x[2] + 0.5 * w * dt
     return np.array(
         [
@@ -41,6 +60,7 @@ def f(x, u, dt):
         ]
     )
 
+#JACOBIANS
 
 def F_jac(x, u, dt):
     """Jacobian df/dx of :func:`f`."""
