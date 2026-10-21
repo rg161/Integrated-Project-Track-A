@@ -6,6 +6,7 @@ from .noise import odom_cov
 
 
 class MobileRobotEKF:
+    #Normalized innovation squared
     POSE_NIS_LIMIT = 16.27          # approx 99.9% chi-square, dof=3
     RANGE_BEARING_NIS_LIMIT = 13.82 # approx 99.9% chi-square, dof=2
 

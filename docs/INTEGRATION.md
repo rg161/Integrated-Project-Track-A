@@ -35,24 +35,7 @@ deliverable. The required Waffle Pi meshes and their licence are included.
 | Close marker was missed by default OpenCV contour grouping | Narrower candidate grouping, verified against a real rendered close-up |
 | No integrated evidence | Seeded trials, versioned configuration snapshots, logs, plots, calibration and regression tests |
 
-## Why the old fitted wheel values were not reused
 
-The old README measured effective wheel parameters under the original contact
-configuration. Those values are not different physical axle dimensions.
-Changing wheel collision/contact behaviour invalidates that fit.
-
-During integration the rear support spheres were found to act as brakes despite
-their low friction settings. MuJoCo combines equal-priority geom contact
-parameters using the larger contact dimension and friction coefficients. The
-floor therefore overrode those supports. Giving the supports higher priority
-restores the intended frictionless contact. The corrected model was checked
-with straight and spin trials at three commanded wheel speeds.
-
-The nominal wheel radius remains 0.033 m and axle spacing 0.288 m. Rounded wheel
-contacts are ellipsoids with radial semi-axes 0.033 m and axle half-width 0.009 m.
-They avoid an overly broad/irregular mesh contact patch. The original visual
-meshes remain unchanged. These are documented simulation approximations, not a
-new identification of real TurtleBot hardware.
 
 ## Truth isolation
 
