@@ -22,7 +22,7 @@ def read_log(path):
 
 
 if __name__ == '__main__':
-    # Allow callers to override the default log path via a command-line argument.
+    """Allow callers to override the default log path via a command-line argument."""
     path = '/tmp/controller_log.csv'
     if len(sys.argv) > 1:
         path = sys.argv[1]
