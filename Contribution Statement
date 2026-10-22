@@ -9,7 +9,7 @@ Daniel:
 
 Jake:
 Part D - Control -> controller design, tuning and tracking results
-[controller.py] (track_a/controller.py)
+[controller.py] (https://github.com/rg161/Integrated-Project-Track-A/blob/6eb7b1ac001dc27b2b7c2716979af92870729921/track_a/controller.py)
 metrics.py
 run_partd.py
 trajectory.py
