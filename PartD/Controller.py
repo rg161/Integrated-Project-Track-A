@@ -32,6 +32,13 @@ CMD_TOPIC = '/cmd_vel'
 
 class ControllerNode:
     def __init__(self):
+        """Initialize the controller node and all ROS interfaces.
+
+        This method sets up the ROS node, initializes the robot state variables,
+        subscribes to the EKF and reference pose topics, creates the command
+        publisher, opens the debug CSV logger, and starts the fixed-rate control
+        loop timing used by the main controller.
+        """
         # Initialize the ROS node. This gives the script a name in the ROS graph.
         rospy.init_node('turtlebot_controller')
 
@@ -63,6 +70,12 @@ class ControllerNode:
         self.rate = rospy.Rate(control_hz)
 
     def ekf_cb(self, msg):
+        """Update the robot's current pose using the EKF message.
+
+        This callback reads the robot's x/y position and transforms the incoming
+        quaternion orientation into a yaw angle in radians so the controller can
+        compute heading and position errors against the target pose.
+        """
         # Callback for EKF pose updates.
         # Extract x, y from the position and compute yaw from the quaternion orientation.
         self.x = msg.pose.position.x
@@ -76,6 +89,12 @@ class ControllerNode:
         self.theta = math.atan2(siny_cosp, cosy_cosp)
 
     def ref_cb(self, msg):
+        """Store the desired waypoint pose from the reference topic.
+
+        The callback records the target position and computes the target heading
+        from its quaternion orientation so the controller can compare the actual
+        robot pose to the desired pose in the same frame.
+        """
         # Callback for the reference pose.
         # Save x and y from the target pose, then compute target heading.
         self.ref = (msg.pose.position.x, msg.pose.position.y)
@@ -90,6 +109,13 @@ class ControllerNode:
         self.ref = (self.ref[0], self.ref[1], theta_ref)
 
     def run(self):
+        """Execute the main control loop for robot tracking.
+
+        The loop waits for valid robot and reference states, computes the error
+        between the current and desired poses in the robot frame, applies the
+        feedback control law, publishes a velocity command, logs the data, and
+        repeats at the configured control frequency until shutdown.
+        """
         # Main control loop.
         # Keep executing until the ROS node is shutdown.
         while not rospy.is_shutdown():
