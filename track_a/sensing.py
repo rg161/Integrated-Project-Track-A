@@ -1,4 +1,12 @@
-"""Camera-side ArUco processing.  This module never reads simulator truth."""
+"""Camera-side ArUco processing.  This module never reads simulator truth.
+
+1. detect aruco markers
+2. add simulated corner noise
+3. solve markers pose relative to camera
+4. reject unreliable detections
+5. estimate a covariance for the pose
+
+"""
 
 from dataclasses import dataclass
 import numpy as np
@@ -20,6 +28,9 @@ R_W_M = np.array([[0.0, 0.0, -1.0], [-1.0, 0.0, 0.0], [0.0, 1.0, 0.0]])
 
 @dataclass
 class ArucoMeasurement:
+    """
+    One accepted camera measurement of the robot pose
+    """
     pose: np.ndarray
     R: np.ndarray
     reprojection_px: float
@@ -29,7 +40,13 @@ class ArucoMeasurement:
 
 
 class ArucoCamera:
+    """
+    Detects the charging-station marker and turns it into a robot pose
+    """
     def __init__(self, config):
+        """
+        Build the camera model, detector and the marker's known geometry
+        """
         self.c = config
         f = config.camera_height / (2.0 * np.tan(np.deg2rad(config.camera_fovy) / 2.0))
         self.K = np.array(
@@ -57,11 +74,17 @@ class ArucoCamera:
         self.last_reason = "not_run"
 
     def _detect(self, gray):
+        """
+        Detect markers in a grayscale image
+        """
         if self.detector is not None:
             return self.detector.detectMarkers(gray)
         return cv2.aruco.detectMarkers(gray, self.dictionary)
 
     def _solve_pose(self, corners):
+        """
+        Robot pose from the 4 marker corners
+        """
         corners = np.asarray(corners, dtype=np.float32).reshape(4, 2)
         ok, rvec, tvec = cv2.solvePnP(
             self.object_points,
@@ -108,6 +131,9 @@ class ArucoCamera:
         return (vecs * vals) @ vecs.T
 
     def measure(self, rgb, rng=None, noise_scale=1.0):
+        """
+        Measure the robot pose from one RGB camera frame
+        """
         img = np.asarray(rgb)
         if img.ndim != 3 or img.shape[2] < 3:
             self.last_reason = "invalid_image"
