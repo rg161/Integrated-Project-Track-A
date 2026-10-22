@@ -2,6 +2,13 @@
 
 Does not silently change runtime parameters. The ideal camera intrinsics come
 from the MuJoCo optical specification; this is not real-camera calibration.
+
+- straight/spin trials at diff wheel speeds. to measure effective wheel radius and wheel seperation
+
+- mixed motion run. pose predicted from encoder increments, compared with ground truth, gives position and heading
+
+- camera checks. use aruco marker with five start poses, compare pose with ground truth
+
 """
 
 import argparse
@@ -14,6 +21,15 @@ import numpy as np
 
 
 def calibrate(output):
+
+    """
+    1. straight/spin trials at diff wheel speeds. to measure effective wheel radius and wheel seperation
+
+    2. mixed motion run. pose predicted from encoder increments, compared with ground truth, gives position and heading
+
+    3. camera checks. use aruco marker with five start poses, compare pose with ground truth
+    """
+
     from track_a.config import Config, TRIALS
     from track_a.simulator import Simulator
     from track_a.ground_truth import GroundTruth
@@ -21,10 +37,19 @@ def calibrate(output):
     from track_a.noise import wheel_increments_to_motion
     from track_a.sensing import ArucoCamera
 
-    c = Config()
+    c = Config() #default project configurations
     rows = []
     radius = []
+
+
     for mode in ["straight", "spin"]:
+        """
+        Stage 1.
+        new simulation for each mode and speed
+        Straight - both wheels same speed
+        Spin - left reversed,
+        Use ground truth for calibration
+        """
         for speed in [1.5, 3.0, 4.5]:
             with Simulator(c, TRIALS["no_camera"]) as sim:
                 truth = GroundTruth(sim.model, sim.data)
@@ -52,17 +77,26 @@ def calibrate(output):
                     "encoder_increments_rad": dphi.tolist(),
                 }
                 if mode == "straight":
+                    #effective radius = distance travelled / wheel rotation
                     row["effective_radius_m"] = float(
                         np.linalg.norm(delta[:2]) / np.mean(dphi)
                     )
                     radius.append(row["effective_radius_m"])
                 else:
+                    #using the mean radius from the straight trials above
                     row["effective_base_m"] = float(
                         np.mean(radius) * (dphi[1] - dphi[0]) / yaw_change
                     )
                 rows.append(row)
-    # Independent mixed-motion validation, driven by encoder increments.
+    
+    
+   
     with Simulator(c, TRIALS["no_camera"]) as sim:
+        """
+        Stage 2.
+        Independent mixed-motion validation, driven by encoder increments.
+        pose is predicted purely from nominal data and encoder, then compared with ground
+        """
         truth = GroundTruth(sim.model, sim.data)
         pred = truth.pose()
         enc = sim.sample().wheel_angles
@@ -71,18 +105,29 @@ def calibrate(output):
             for _ in range(30):
                 sim.step(command)
                 new = sim.sample().wheel_angles
+                #encoder increments -> distance travelled ds and heading change dth
                 ds, dth = wheel_increments_to_motion(
                     *(new - enc), c.wheel_radius, c.wheel_base
                 )
+                #divide by dt to get speeds, then move up a step
                 pred = f(pred, [ds / c.dt, dth / c.dt], c.dt)
                 enc = new
                 error = pred - truth.pose()
                 error[2] = wrap(error[2])
                 errors.append(error)
     errors = np.array(errors)
+
+
+
+  #Stage 3.
     camera = ArucoCamera(c)
     views = []
     for pose in [
+        """
+        Stage 3.
+        start robot at 5 diff poses (final is aim pose)
+        use aroco to detect marker and compare measured pose w/ ground truth
+        """
         (0.45, -0.12, 0.08),
         (0.65, 0.10, -0.10),
         (0.8, -0.10, 0.15),
@@ -98,6 +143,7 @@ def calibrate(output):
                 "reason": camera.last_reason,
             }
             if m is not None:
+                #measured pose vs ground truth
                 error = m.pose - GroundTruth(sim.model, sim.data).pose()
                 error[2] = wrap(error[2])
                 entry.update(
@@ -109,6 +155,9 @@ def calibrate(output):
                     }
                 )
             views.append(entry)
+
+
+    
     result = {
         "wheel_trials": rows,
         "camera_intrinsics": camera.K.tolist(),
