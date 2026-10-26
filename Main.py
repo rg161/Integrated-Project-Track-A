@@ -34,6 +34,10 @@ def main(argv=None):
     )
     parser.add_argument("--output", type=Path, help="Output directory")
     parser.add_argument("--quiet", action="store_true")
+    parser.add_argument("--no-camera-video", action="store_true",
+                        help="Do not save the onboard camera view (camera_view.mp4)")
+    parser.add_argument("--camera-window", action="store_true",
+                        help="Also show the onboard camera view in a live window (needs GUI OpenCV)")
     args = parser.parse_args(argv)
     if args.duration <= 0:
         parser.error("--duration must be positive")
@@ -53,6 +57,8 @@ def main(argv=None):
             viewer=not args.headless,
             realtime=not args.headless or args.realtime,
             verbose=not args.quiet,
+            camera_video=not args.no_camera_video,
+            camera_window=args.camera_window,
         )
     except KeyboardInterrupt:
         print("Interrupted; simulator closed.")

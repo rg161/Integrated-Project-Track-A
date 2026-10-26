@@ -4,7 +4,7 @@ import mujoco
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from part_a.model import f, wheels_to_v_w, R_wheel, L_wheel
+from track_a.model import f, wheels_to_v_w, R_WHEEL, L_WHEEL
 
 
 """     
@@ -71,7 +71,7 @@ s, e = steady_test(3.0, 3.0)
 dist = np.linalg.norm(e[0] - s[0])
 dphi = ((e[2] - s[2]) + (e[3] - s[3])) / 2
 r_est = dist / dphi
-print(f"radius: measured {r_est:.4f} m vs model {R_wheel} m")
+print(f"radius: measured {r_est:.4f} m vs model {R_WHEEL} m")
 
 #spin:
 #wheels spin opp directions
@@ -79,7 +79,7 @@ print(f"radius: measured {r_est:.4f} m vs model {R_wheel} m")
 s, e = steady_test(-3.0, 3.0)
 dyaw = wrap(e[1] - s[1])
 L_est = r_est * ((e[3] - s[3]) - (e[2] - s[2])) / dyaw
-print(f"separation: measured {L_est:.4f} m vs model {L_wheel} m")
+print(f"separation: measured {L_est:.4f} m vs model {L_WHEEL} m")
 
 #compare motion model to ground truth
 #wheel speed aims (wl, wr dur)
