@@ -120,17 +120,23 @@ class CameraView:
 
     def _open_writer(self, w, h):
         """
-        open mp4 writer for first use
+        Open the mp4 writer on first use (so we know the frame size)
         """
         self.output.mkdir(parents=True, exist_ok=True)
         path = self.output / "camera_view.mp4"
-        writer = cv2.VideoWriter(str(path), cv2.VideoWriter_fourcc(*"mp4v"), self.fps, (w, h))
-        if writer.isOpened():
-            self._writer = writer
-            self.video_path = path
-        else:
-            self.record = False
-            print("Could not open a video writer; camera video not saved.")
+        #H.264 ('avc1') plays everywhere, 'mp4v' showed as a green screen in
+        #QuickTime/browsers, try H.264 first and only fall back if OpenCV fails
+        for code in ("avc1", "H264", "mp4v"):
+            writer = cv2.VideoWriter(str(path), cv2.VideoWriter_fourcc(*code), self.fps, (w, h))
+            if writer.isOpened():
+                self._writer = writer
+                self.video_path = path
+                if code == "mp4v":
+                    print("H.264 not available in this OpenCV; saved as mp4v "
+                        "(if it plays green, open it in VLC or convert with ffmpeg -pix_fmt yuv420p).")
+                return
+        self.record = False
+        print("Could not open a video writer; camera video not saved.")
 
     def close(self):
         """
