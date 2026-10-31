@@ -4,7 +4,9 @@ Rohan:
 Part A - Modelling -> state-space model analysis, observability and controllability analysis
 
 Stephen:
-
+ Part C - For Part C, I developed and integrated the Extended Kalman Filter (EKF) used to estimate the TurtleBot3’s position and heading. 
+The EKF predicts the robot state from wheel-encoder measurements and corrects it using ArUco camera pose measurements. I also implemented uncertainty propagation, angle wrapping, NIS-based measurement rejection, 
+and covariance updates. The final estimator provides the estimated state ([x, y, \theta]) and covariance (P) for use by the planner and controller. I also played a part with bringing everyones code together as well as editing the final demonstration video.
 Daniel:
 Part B - Sensing -> Frame handling, ground truth, noise handling
 
