@@ -33,6 +33,16 @@ python main.py --headless --scenario no_camera --duration 25
 python main.py
 ```
 
+'''
+Run with live camera view:
+first time -> run the following code
+   pip uninstall -y opencv-contrib-python-headless opencv-python-headless opencv-python opencv-contrib-python
+   pip install -r requirements.txt
+
+then to run with live camera view:
+   python Main.py --headless --realtime --camera-window --seed 2
+'''
+
 ## Tests
 
 ```powershell

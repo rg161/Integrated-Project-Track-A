@@ -1,4 +1,9 @@
-"""Evaluation and result export. Ground truth is used here only for scoring."""
+"""
+Evaluation and result export. Ground truth is used here only for scoring.
+
+runner calls evaluator.record() once per controller step, then metrics() to
+score the whole run, then save() to write the results folder
+"""
 
 from dataclasses import asdict
 import csv
@@ -11,7 +16,17 @@ from .model import wrap
 
 
 class Evaluator:
+    """
+    Collects a per-step log for one run and turns it into metrics and files
+    """
     def __init__(self, config, trial, seed, output, start_pose=None):
+        """
+        config: Config for this run (used for the goal, dt and docking zone).
+        trial: the Trial scenario being run.
+        seed: random seed of this run, saved with the results.
+        output: folder the results are written to.
+        start_pose: the pose the run started from; defaults to config.start
+        """
         self.c = config
         self.trial = trial
         self.seed = int(seed)
@@ -21,17 +36,23 @@ class Evaluator:
             if start_pose is None
             else np.asarray(start_pose, dtype=float).reshape(3).copy()
         )
-        self.rows = []
-        self.camera_updates = 0
-        self.camera_rejections = 0
+        self.rows = []   #one dict per recorded step
+        self.camera_updates = 0 #camera measurements the EKF accepted
+        self.camera_rejections = 0 #camera measurements the EKF rejected
 
     def note_camera(self, accepted):
+        """
+        Count one camera measurement as accepted or rejected
+        """
         if accepted:
             self.camera_updates += 1
         else:
             self.camera_rejections += 1
 
     def record(self, *, t, estimate, P, truth, odom, reference, wheels, command, mode, nis=np.nan):
+        """
+        Log one control step. All arguments are keyword-only
+        """
         estimate = np.asarray(estimate, dtype=float)
         truth = np.asarray(truth, dtype=float)
         odom = np.asarray(odom, dtype=float)
@@ -64,6 +85,13 @@ class Evaluator:
         self.rows.append(row)
 
     def metrics(self, *, controller_done, collisions, termination):
+        """
+        Score the whole run and return a dictionary of metrics
+
+        only success if all are met: the controller declared docked, the true final
+        position within 0.08 m of the goal, the true final heading within 8
+        degrees, and zero collisions
+        """
         if not self.rows:
             raise RuntimeError("No evaluation samples were recorded")
         est = np.array([[r["x_hat"], r["y_hat"], r["theta_hat"]] for r in self.rows])
@@ -128,6 +156,9 @@ class Evaluator:
         }
 
     def save(self, metrics, planner=None, camera_image=None):
+        """
+        Write the results folder
+        """
         self.output.mkdir(parents=True, exist_ok=True)
         # CSV
         keys = list(self.rows[0].keys())
@@ -148,6 +179,10 @@ class Evaluator:
         self._save_plot(metrics)
 
     def _save_plot(self, metrics):
+        """
+        Save summary.png: the true, EKF and odometry paths on the left, and
+        the EKF position error over time on the right
+        """
         try:
             import matplotlib.pyplot as plt
         except Exception:

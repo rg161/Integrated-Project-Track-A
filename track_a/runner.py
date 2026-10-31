@@ -13,11 +13,13 @@ from .model import f, v_w_to_wheels, wheels_to_v_w
 from .noise import clean_scan
 from .planning import LidarPlanner
 from .sensing import ArucoCamera
+from .camera_view import CameraView
 from .simulator import Simulator
 from .config import sample_start_pose
 
 
-def run(config, trial, seed, output, viewer=False, realtime=False, verbose=True):
+def run(config, trial, seed, output, viewer=False, realtime=False, verbose=True,
+        camera_video=True, camera_window=False):
     output = Path(output)
     rng_enc = np.random.default_rng(seed * 10 + 1)
     rng_lidar = np.random.default_rng(seed * 10 + 2)
@@ -35,6 +37,8 @@ def run(config, trial, seed, output, viewer=False, realtime=False, verbose=True)
 
     viewer_handle = None
     last_camera_image = None
+    camera_view = CameraView(output, record=camera_video, window=camera_window, fps=1.0 / config.camera_period)
+    control = None
     with Simulator(config, trial, start_pose=start_pose) as sim:
         truth = GroundTruth(sim.model, sim.data)
         if verbose:
@@ -102,6 +106,7 @@ def run(config, trial, seed, output, viewer=False, realtime=False, verbose=True)
             if t + 1e-10 >= next_camera:
                 in_blackout = trial.blackout[0] <= t <= trial.blackout[1]
                 dropped = in_blackout or (rng_dropout.random() < trial.camera_dropout)
+                accepted = None
                 if not dropped:
                     last_camera_image = sim.camera_image()
                     measurement = camera.measure(last_camera_image, rng_camera, noise_scale=trial.noise_scale)
@@ -112,6 +117,20 @@ def run(config, trial, seed, output, viewer=False, realtime=False, verbose=True)
                             camera_age = 0.0
                     elif camera.last_reason not in {"not_found", "wrong_id"}:
                         evaluator.note_camera(False)
+                if camera_video or camera_window:
+                    shown = last_camera_image if last_camera_image is not None else sim.camera_image()
+                    frame = camera_view.draw(
+                        shown,
+                        None if dropped else measurement,
+                        camera.last_reason,
+                        t,
+                        control.mode if control is not None else "start",
+                        camera_age,
+                        ekf.get_state(),
+                        accepted=accepted,
+                        dropped=dropped,
+                    )
+                    camera_view.show(frame)
                 next_camera += config.camera_period
 
             x_hat, P = ekf.get_state(), ekf.get_covariance()
@@ -169,6 +188,7 @@ def run(config, trial, seed, output, viewer=False, realtime=False, verbose=True)
                 viewer_handle.close()
             except Exception:
                 pass
+        camera_view.close()
         metrics = evaluator.metrics(
             controller_done=done, collisions=sim.collisions, termination=termination
         )

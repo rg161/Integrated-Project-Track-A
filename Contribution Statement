@@ -8,3 +8,8 @@ Stephen:
 Daniel:
 
 Jake:
+Part D - Control -> controller design, tuning and tracking results
+[controller.py]
+metrics.py
+run_partd.py
+trajectory.py
