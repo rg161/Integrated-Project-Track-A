@@ -42,22 +42,28 @@
     <geom name="wall_top" type="box" pos="0 1.68 0.25" size="2.32 0.04 0.25" material="obstacle_mat" group="1" />
     <geom name="obstacle_a" type="box" pos="-0.25 -0.31 0.22" size="0.20 0.28 0.22" material="obstacle_mat" group="1" />
     <geom name="obstacle_b" type="box" pos="0.42 0.72 0.20" size="0.24 0.18 0.20" material="obstacle_mat" group="1" />
+    <geom name="random_obstacle_1" type="box" pos="50 50 0.20" size="0.16 0.16 0.20" material="obstacle_mat" group="1" />
+    <geom name="random_obstacle_2" type="box" pos="50 50 0.20" size="0.16 0.16 0.20" material="obstacle_mat" group="1" />
+    <geom name="random_obstacle_3" type="box" pos="50 50 0.20" size="0.16 0.16 0.20" material="obstacle_mat" group="1" />
+    <geom name="random_obstacle_4" type="box" pos="50 50 0.20" size="0.16 0.16 0.20" material="obstacle_mat" group="1" />
+    <geom name="random_obstacle_5" type="box" pos="50 50 0.20" size="0.16 0.16 0.20" material="obstacle_mat" group="1" />
+    <geom name="random_obstacle_6" type="box" pos="50 50 0.20" size="0.16 0.16 0.20" material="obstacle_mat" group="1" />
     <geom name="charging_station" type="box" pos="1.72 0 0.18" size="0.08 0.28 0.18" material="dock_mat" group="1" />
     <!-- Visual-only charging-zone perimeter. Runtime config sets exact position/size. -->
-    <geom name="dock_zone_xmin" type="box" pos="1.00 0 0.008" size="0.012 0.16 0.004" material="dock_zone_mat" group="2" contype="0" conaffinity="0" />
-    <geom name="dock_zone_xmax" type="box" pos="1.24 0 0.008" size="0.012 0.16 0.004" material="dock_zone_mat" group="2" contype="0" conaffinity="0" />
-    <geom name="dock_zone_ymin" type="box" pos="1.12 -0.16 0.008" size="0.12 0.012 0.004" material="dock_zone_mat" group="2" contype="0" conaffinity="0" />
-    <geom name="dock_zone_ymax" type="box" pos="1.12 0.16 0.008" size="0.12 0.012 0.004" material="dock_zone_mat" group="2" contype="0" conaffinity="0" />
-    <geom name="aruco_board" type="box" pos="1.603 0 0.24" size="0.004 0.15 0.15" material="white_marker" group="2" contype="0" conaffinity="0" />
-    <geom name="aruco_backing" type="box" pos="1.595 0.0 0.24" size="0.004 0.12 0.12" material="black_marker" group="2" contype="0" conaffinity="0" />
-    <geom name="aruco_white_1_1" type="box" pos="1.5905 0.06 0.3" size="0.0008 0.0202 0.0202" material="white_marker" group="2" contype="0" conaffinity="0" />
-    <geom name="aruco_white_1_2" type="box" pos="1.5905 0.02 0.3" size="0.0008 0.0202 0.0202" material="white_marker" group="2" contype="0" conaffinity="0" />
-    <geom name="aruco_white_2_2" type="box" pos="1.5905 0.02 0.26" size="0.0008 0.0202 0.0202" material="white_marker" group="2" contype="0" conaffinity="0" />
-    <geom name="aruco_white_3_1" type="box" pos="1.5905 0.06 0.22" size="0.0008 0.0202 0.0202" material="white_marker" group="2" contype="0" conaffinity="0" />
-    <geom name="aruco_white_3_2" type="box" pos="1.5905 0.02 0.22" size="0.0008 0.0202 0.0202" material="white_marker" group="2" contype="0" conaffinity="0" />
-    <geom name="aruco_white_3_3" type="box" pos="1.5905 -0.02 0.22" size="0.0008 0.0202 0.0202" material="white_marker" group="2" contype="0" conaffinity="0" />
-    <geom name="aruco_white_3_4" type="box" pos="1.5905 -0.06 0.22" size="0.0008 0.0202 0.0202" material="white_marker" group="2" contype="0" conaffinity="0" />
-    <geom name="aruco_white_4_3" type="box" pos="1.5905 -0.02 0.18" size="0.0008 0.0202 0.0202" material="white_marker" group="2" contype="0" conaffinity="0" />
+    <geom name="dock_zone_xmin" type="box" pos="1.00 0 0.008" size="0.012 0.16 0.004" material="dock_zone_mat" group="0" contype="0" conaffinity="0" />
+    <geom name="dock_zone_xmax" type="box" pos="1.24 0 0.008" size="0.012 0.16 0.004" material="dock_zone_mat" group="0" contype="0" conaffinity="0" />
+    <geom name="dock_zone_ymin" type="box" pos="1.12 -0.16 0.008" size="0.12 0.012 0.004" material="dock_zone_mat" group="0" contype="0" conaffinity="0" />
+    <geom name="dock_zone_ymax" type="box" pos="1.12 0.16 0.008" size="0.12 0.012 0.004" material="dock_zone_mat" group="0" contype="0" conaffinity="0" />
+    <geom name="aruco_board" type="box" pos="1.603 0 0.24" size="0.004 0.15 0.15" material="white_marker" group="0" contype="0" conaffinity="0" />
+    <geom name="aruco_backing" type="box" pos="1.595 0.0 0.24" size="0.004 0.12 0.12" material="black_marker" group="0" contype="0" conaffinity="0" />
+    <geom name="aruco_white_1_1" type="box" pos="1.5905 0.06 0.3" size="0.0008 0.0202 0.0202" material="white_marker" group="0" contype="0" conaffinity="0" />
+    <geom name="aruco_white_1_2" type="box" pos="1.5905 0.02 0.3" size="0.0008 0.0202 0.0202" material="white_marker" group="0" contype="0" conaffinity="0" />
+    <geom name="aruco_white_2_2" type="box" pos="1.5905 0.02 0.26" size="0.0008 0.0202 0.0202" material="white_marker" group="0" contype="0" conaffinity="0" />
+    <geom name="aruco_white_3_1" type="box" pos="1.5905 0.06 0.22" size="0.0008 0.0202 0.0202" material="white_marker" group="0" contype="0" conaffinity="0" />
+    <geom name="aruco_white_3_2" type="box" pos="1.5905 0.02 0.22" size="0.0008 0.0202 0.0202" material="white_marker" group="0" contype="0" conaffinity="0" />
+    <geom name="aruco_white_3_3" type="box" pos="1.5905 -0.02 0.22" size="0.0008 0.0202 0.0202" material="white_marker" group="0" contype="0" conaffinity="0" />
+    <geom name="aruco_white_3_4" type="box" pos="1.5905 -0.06 0.22" size="0.0008 0.0202 0.0202" material="white_marker" group="0" contype="0" conaffinity="0" />
+    <geom name="aruco_white_4_3" type="box" pos="1.5905 -0.02 0.18" size="0.0008 0.0202 0.0202" material="white_marker" group="0" contype="0" conaffinity="0" />
     <body name="base" pos="0 0 0">
       <inertial pos="-0.064 0 0.06" mass="1.8" diaginertia="0.01 0.01 0.008" />
       <joint type="free" name="base_joint" />

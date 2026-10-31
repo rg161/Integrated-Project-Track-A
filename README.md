@@ -1,19 +1,21 @@
-# Integrated Project — Track A
+# Track A — TurtleBot3 Visual Waypoint Navigation
 
-TurtleBot3 Waffle Pi visual waypoint navigation for 41014 Sensors and Control in Mechatronics Systems.
+A minimal simulation-only implementation for **41014 Sensors and Control in Mechatronics Systems — Assessment 4**.
 
-The integrated runtime is in `track_a/`. The older `PartA/`, `PartB/`, `PartC/`, `PartD/` and `reference_sources/` folders are retained as provenance/compatibility material; they are **not** separate applications.
+The robot uses:
 
-## Runtime pipeline
+- wheel encoders for EKF prediction,
+- a rendered RGB camera + ArUco marker for EKF correction,
+- 2D LiDAR for occupancy mapping and obstacle avoidance,
+- A* for path planning,
+- an estimated-state feedback controller for path tracking and docking,
+- MuJoCo ground truth **only for evaluation**.
 
-`MuJoCo encoders -> EKF prediction -> rendered ArUco camera -> EKF correction -> estimated pose -> LiDAR mapping/A* -> state-feedback controller -> wheel commands -> MuJoCo`
+## Setup
 
-Ground truth is isolated to evaluation/calibration and is never passed to the estimator, planner or controller.
-
-## Setup (Windows PowerShell)
+### Windows PowerShell
 
 ```powershell
-cd "C:\Users\steph\OneDrive\Desktop\sensors and cotrol\Integrated-Project-Track-A-main"
 py -m venv .venv
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 & ".\.venv\Scripts\Activate.ps1"
@@ -21,27 +23,60 @@ python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-Select `.venv\Scripts\python.exe` as the VS Code Python interpreter.
+
+## Camera and visual docking
+
+The front camera is rigidly mounted to the TurtleBot. During normal navigation, obstacles naturally move in and out of its field of view as the robot turns. Near the charging station, the controller uses the detected ArUco marker bearing as a visual-servo correction so the marker is kept near the centre of the camera while the robot aligns and docks.
 
 ## Run
 
+The interface is intentionally small.
+
+### Standard layout — visual viewer
+
 ```powershell
-python main.py --headless --scenario nominal --duration 65
-# Use the original deterministic start only when debugging:
-python main.py --headless --scenario nominal --duration 65 --fixed-start
-python main.py --headless --scenario no_camera --duration 25
 python main.py
 ```
 
-'''
-Run with live camera view:
-first time -> run the following code
-   pip uninstall -y opencv-contrib-python-headless opencv-python-headless opencv-python opencv-contrib-python
-   pip install -r requirements.txt
+### Random-obstacle layout
 
-then to run with live camera view:
-   python Main.py --headless --realtime --camera-window --seed 2
-'''
+Six obstacles are randomised from the seed while keeping the start and dock clear.
+The generated layout is path-checked, and the online LiDAR map uses both obstacle hits and no-return free-space rays so stale detections cannot create permanent ghost walls.
+
+```powershell
+python main.py --layout random --seed 2
+```
+
+### Headless robustness run
+
+```powershell
+python main.py --headless --scenario noisy --seed 2
+```
+
+Available layouts:
+
+```text
+standard   original two-obstacle room
+random     six seed-reproducible random obstacles
+```
+
+Available scenarios:
+
+```text
+nominal    normal sensor noise
+noisy      increased sensor noise + some camera dropout
+dropout    camera dropout + temporary blackout
+disturbed  brief sideways force disturbance
+```
+
+
+Other useful options:
+
+```text
+--seed N       repeatable random start/obstacle/noise seed
+--duration S   maximum simulation duration in seconds
+--headless     run without the MuJoCo viewer
+```
 
 ## Tests
 
@@ -49,28 +84,54 @@ then to run with live camera view:
 python -m pytest -q
 ```
 
-## Important files
+The MuJoCo scene tests automatically skip if MuJoCo is not installed. All runtime functions and methods are required by a regression test to contain a `"""docstring"""`.
 
-- `track_a/config.py` — one shared set of robot, sensor and controller parameters.
-- `track_a/model.py` — midpoint differential-drive model and Jacobians.
-- `track_a/frames.py` — world/base/camera/LiDAR/marker transforms.
-- `track_a/noise.py` — LiDAR cleaning, ArUco gating and encoder covariance.
-- `track_a/estimation.py` — Part C EKF using encoder prediction and camera correction.
-- `track_a/sensing.py` — rendered ArUco detection and PnP pose recovery.
-- `track_a/planning.py` — LiDAR occupancy map and inflated-grid A*.
-- `track_a/controller.py` — estimated-state path tracking and visual docking.
-- `track_a/simulator.py` — MuJoCo robot, encoders, LiDAR rays, RGB camera and disturbance scenarios.
-- `track_a/runner.py` — the single end-to-end integration loop.
-- `track_a/evaluation.py` — truth-only metrics and output plots/logs.
+## Runtime files
 
-See `docs/DESIGN.md` and `docs/INTEGRATION.md` for the reasoning behind the model, frames, EKF, controller and integration fixes.
+```text
+main.py
+track_a/
+├── config.py        parameters, scenarios, random start/obstacles
+├── model.py         differential-drive model and Jacobians
+├── frames.py        camera/marker coordinate transforms
+├── noise.py         LiDAR cleaning, camera gating, odometry covariance
+├── sensing.py       ArUco detection + PnP pose measurement
+├── estimation.py    Part C EKF
+├── planning.py      LiDAR occupancy map + A*
+├── controller.py    estimated-state path tracking + docking
+├── simulator.py     MuJoCo sensors, physics and collision counting
+├── ground_truth.py  evaluation-only true pose
+├── evaluation.py    RMSE/NEES/docking metrics + result export
+└── runner.py        one integrated sensor-estimation-control loop
 
-## Random start and charging-zone box
+models/
+├── track_a_scene.xml
+└── robotis_tb3/assets/
 
-Normal runs now sample a reproducible random x/y start on the obstacle-free left side of the room.
-The `--seed` controls the start as well as sensor noise/dropout, so the same seed repeats exactly.
-Use `--fixed-start` to return to `Config.start` for debugging.
+tests/
+├── test_core.py
+└── test_simulator.py
+```
 
-A green visual-only rectangle marks the charging acceptance zone in front of the station.
-Its bounds are configured by `docking_zone_center` and `docking_zone_half_size` in `track_a/config.py`.
-Runtime status prints `dock_box=IN/OUT`, and `metrics.json` records estimated and true zone membership.
+## Results
+
+Each run creates:
+
+```text
+results/<layout>_<scenario>_seed<seed>/
+├── metrics.json
+├── log.csv
+├── run_config.json
+├── map.npz
+├── camera.png
+└── summary.png
+```
+
+For the final project page, run repeated seeds for the standard and random layouts and report success rate, EKF RMSE, docking error, collisions, NEES/coverage, and camera acceptance/rejection.
+
+## Layout targets
+
+The standard layout docks at `(1.12, 0.00)` with the ArUco marker at `(1.60, 0.00, 0.24)`.
+The random layout uses a different docking location at `(1.12, 0.80)` with the marker at `(1.60, 0.80, 0.24)`, while keeping the same forward-facing camera geometry.
+
+The random layout also moves the ArUco charging target and charging-station geometry, not just the obstacles.

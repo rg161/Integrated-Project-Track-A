@@ -1,9 +1,8 @@
-# Tested direct dependencies. Use a separate virtual environment.
+# Runtime dependencies
 numpy==2.3.5
-scipy==1.17.0
 matplotlib==3.10.8
 mujoco==3.16.0
 opencv-contrib-python==5.0.0.93
 
-# Test dependency used by the supplied regression suite.
+# Automated regression tests
 pytest==9.0.2

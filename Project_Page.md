@@ -1,176 +1,247 @@
-# Integrated Project Track A
+# Integrated Project — Track A
 
-## Group Number
-Group Number: [Insert group number]
+## Team
 
-## Team Members
+**Group number:** [add group number]
+
 - Rohan
 - Stephen
 - Daniel
 - Jake
 
-## GitHub Repository
-Repository: https://github.com/rg161/Integrated-Project-Track-A
-Running branch: backuprunning
+**Repository:** [add final GitHub repository link]
 
-## Project Overview
-This project develops a mobile robot navigation and docking system for a TurtleBot operating in a simulated obstacle-filled room. The robot uses LiDAR for mapping and obstacle avoidance, and a camera with an ArUco marker for visual docking. The system estimates the robot pose online, plans a collision-free route, tracks the planned path, and docks at the charging station while handling sensor noise, partial camera dropouts, and minor disturbances.
+## Project overview
 
-The robot state is a planar unicycle pose:
-- x, y: position in the world frame
-- theta: heading angle
+This project implements **Track A: mobile robot visual waypoint navigation** using a simulated TurtleBot3 Waffle Pi in MuJoCo. The robot navigates an obstacle-filled room using 2D LiDAR, estimates its pose using an Extended Kalman Filter (EKF), and visually docks at an ArUco-marked charging station. The controller acts only on the **estimated state**, never simulator ground truth.
 
-The main task is to navigate from a start pose to the goal while avoiding obstacles and visually aligning with the charging marker using the camera.
+Two environment layouts are included:
 
-## System Diagram / Coordinate Frames
+- **standard** — the original two fixed obstacles,
+- **random** — six seed-reproducible obstacles with random positions/sizes, while keeping the start and docking areas clear.
 
-The system uses the following frames:
-- W: world frame
-- B: robot base frame
-- C: camera frame
-- M: ArUco marker frame
-- L: LiDAR frame
+The robot start x/y position is also randomised by seed.
 
-Simple reference diagram:
+## System pipeline
 
 ```text
-        World (W)
-            |
-            | known transform
-            v
-      Robot Base (B)
-      /      |      \
-     /       |       \
-    L        C        wheel joints
-             |
-             v
-         Marker (M)
+MuJoCo wheel encoders ──► EKF prediction ───────────────┐
+                                                        │
+MuJoCo RGB camera ─► ArUco/PnP pose ─► EKF correction ─┤
+                                                        ▼
+                                              estimated [x,y,theta], P
+                                                        │
+MuJoCo LiDAR ─► cleaning ─► occupancy map ─► A* path ──┤
+                                                        ▼
+                                                state-feedback control
+                                                        │
+                                                        ▼
+                                                   wheel commands
+                                                        │
+                                                        ▼
+                                                      MuJoCo
+
+MuJoCo ground truth ─────────────────────────────► evaluation only
 ```
 
-The LiDAR is mounted at a fixed known transform relative to the robot base. The camera observes the ArUco marker, and the pose of the marker relative to the camera is recovered using OpenCV detection and solvePnP. This gives a measurement update for the estimator.
+## Part A — modelling
 
-## Model and Parameters
-The robot follows the standard unicycle model:
+The planar state and input are:
 
-- State: x = [x, y, theta]^T
-- Input: u = [v, omega]^T
+```text
+state: x = [x, y, theta]^T
+input: u = [v, omega]^T
+```
 
-The implementation uses the supplied midpoint discretisation consistent with the project design:
+The midpoint discrete unicycle model is used:
 
-- wheel radius: 0.033 m
-- wheel separation: 0.288 m
-- dt: 0.05 s
+```text
+theta_mid = theta + 0.5*omega*dt
+x_next     = x + v*cos(theta_mid)*dt
+y_next     = y + v*sin(theta_mid)*dt
+theta_next = wrap(theta + omega*dt)
+```
 
-The robot is validated against MuJoCo with the following representative model parameters:
-- nominal wheel radius = 0.033 m
-- nominal wheel separation = 0.288 m
-- LiDAR and odometry noise are added as part of the simulated sensing pipeline
+Key parameters:
 
-The project design also reports calibration checks showing the effective wheel size is consistent with the chosen simulation model and that the robot motion matches the physical model to a good degree.
+- wheel radius: **0.033 m**
+- wheel separation: **0.288 m**
+- control/estimation timestep: **0.05 s**
 
-## Estimation
-The estimator is an Extended Kalman Filter (EKF) that predicts the robot pose using the unicycle motion model and updates using sensor measurements.
+`model.py` contains the shared motion model plus the analytical state/input Jacobians used by the EKF. The regression tests compare those Jacobians against finite differences.
 
-Key implementation points:
-- Prediction uses wheel encoder increments and the discrete motion model.
-- The process covariance includes odometry uncertainty and additional continuous process noise.
-- The filter uses measurement updates from the detected camera marker pose and LiDAR-informed map constraints where relevant.
-- Innovation gating is used to reject extreme outliers.
-- The covariance update follows Joseph-form correction for numerical stability.
+### Observability / controllability interpretation
 
-Important design note: ground truth from the simulator is only used for evaluation and validation. It is not used directly in the real controller or estimator loop.
+The full camera pose measurement is `[x, y, theta]`, so its local measurement matrix is `H = I3` and all three states are directly observable while the marker pose measurement is available. Wheel encoders provide motion increments but do not independently remove global position/heading drift, which is why the camera correction is needed. Differential-drive motion is controlled through `v` and `omega`; translation and rotation over time allow the mobile robot to reach planar poses subject to the non-holonomic no-sideways-motion constraint.
 
-This is visible in the code structure and documentation, especially in the integration notes and evaluation workflow.
+## Part B — sensing and frames
 
-## Controller Design
-The controller is a state-feedback planner and dock controller built around the estimated robot state.
+### LiDAR
 
-Main control strategy:
-- LiDAR occupancy map is built from the environment.
-- A* path planning is performed on an inflated cost map.
-- A local reference point is selected ahead of the robot along the path.
-- Heading toward the look-ahead point is used for path tracking.
-- A receding-horizon reference point is used rather than a fixed trajectory.
+- 180 simulated beams over 360 degrees
+- maximum range: **3.5 m**
+- nominal range noise standard deviation: **0.008 m**
+- scan period: **0.10 s**
+- invalid/out-of-range values are rejected and valid neighbours are median filtered
 
-Key parameters from the project design:
-- look-ahead distance: 0.28 m
-- turn-in-place threshold: entering at 0.65 rad, leaving at 0.35 rad
-- docking region: within 0.28 m of goal
-- tighter stopping distance: translational motion reduced below 0.50 m, fully stopped below 0.24 m
-- position uncertainty safeguard: excessive uncertainty halts motion
+### Camera / ArUco
 
-The docking controller reduces forward speed as the robot approaches the target and rotates to align with the desired heading before declaring completion. A dwell condition based on accepted camera data is required before docking is considered complete.
+- image size: **480 x 360**
+- vertical FOV: **58 degrees**
+- marker ID: **7**
+- marker side: **0.24 m**
+- camera period: **0.25 s**
 
-## Project Results
-The repository includes quantitative validation results from simulation.
+The camera pipeline detects the marker, solves its pose with OpenCV `solvePnP`, transforms the result through the camera/base/world frames, rejects poor detections using range/size/incidence/reprojection checks, and estimates a 3x3 pose covariance using finite differences of image-corner locations.
 
-### Automated checks
-- pytest: 39 passed
-- ruff/linting checks passed for runtime and test code
-- Jacobian and controllability checks completed
+## Part C — estimation
 
-### End-to-end trial results
-The project reports the following with 3 seeds per condition:
+The EKF estimates:
 
-| Condition | Successes | Mean EKF position RMSE | Mean final dock error | Collisions |
-|---|---:|---:|---:|---:|
-| nominal | 3/3 | 0.0314 m | 0.0543 m | 0 |
-| noisy | 3/3 | 0.0413 m | 0.0503 m | 0 |
-| dropout | 3/3 | 0.0100 m | 0.0553 m | 0 |
-| disturbed | 3/3 | 0.0138 m | 0.0548 m | 0 |
+```text
+x_hat = [x, y, theta]^T
+```
 
-Additional validation indicates the robot reaches the target and successfully docks in the tested scenarios, with the controller and EKF remaining robust to moderate noise and disturbance. The no-camera negative test also confirms that docking does not occur based on proximity alone without valid camera confirmation.
+Prediction uses measured wheel-encoder increments rather than commanded wheel speed. Encoder/odometry uncertainty and continuous process noise are propagated through the model Jacobians.
 
-## Install and Run
-The project is organised for a fresh Python environment and can be run from a clean setup using the repository requirements.
+When the ArUco pose is available, the EKF performs a full-pose correction. The correction includes:
 
-### Requirements
-The repository includes a pinned dependency list in `requirements.txt`:
+- heading innovation wrapping,
+- NIS measurement gating (`16.27`, approximately 99.9% chi-square for 3 DOF),
+- `solve()` rather than an explicit matrix inverse,
+- Joseph-form covariance update,
+- covariance symmetry/eigenvalue protection.
 
-```bash
-python -m venv .venv
-source .venv/bin/activate
+Outputs used by the rest of the pipeline are:
+
+```text
+estimated state x_hat = [x, y, theta]
+covariance P
+```
+
+## Part D — control
+
+The planner creates a LiDAR occupancy map, inflates occupied cells by the robot radius plus safety margin, and computes an A* route to the docking goal.
+
+The controller receives the estimated state/covariance, current path, LiDAR scan and camera age. It performs:
+
+- turn-to-path alignment,
+- estimated-state path tracking,
+- docking approach,
+- final heading alignment,
+- local LiDAR slow/stop protection,
+- recent-camera confirmation before declaring docking complete.
+
+Key values include:
+
+- maximum forward speed: **0.18 m/s**
+- maximum yaw rate: **1.2 rad/s**
+- path gains: `k1=0.8`, `k2=2.0`, `k3=1.8`
+- lookahead: **0.28 m**
+- docking goal tolerance: **0.055 m** and **5 degrees**
+
+## Part E — integration and robustness
+
+The same pipeline can be tested under:
+
+```text
+nominal
+noisy
+dropout
+disturbed
+```
+
+and under both:
+
+```text
+standard layout
+random six-obstacle layout
+```
+
+The random layout is reproducible from `--seed`, and its exact obstacle coordinates/sizes are saved in `run_config.json`.
+
+Ground truth is isolated to `ground_truth.py` and is passed only to `evaluation.py`. It is never imported by sensing, estimation, planning or control.
+
+The evaluator reports:
+
+- EKF position RMSE,
+- EKF heading RMSE,
+- odometry-only position RMSE,
+- reference tracking RMSE,
+- final docking position/heading error,
+- mean NEES and 2-sigma coverage,
+- control effort,
+- collision count,
+- accepted/rejected camera updates,
+- docking-zone entry and task success.
+
+## Quantitative results
+
+**Replace this table with fresh results generated from the submitted build before final submission.** Use repeated seeds rather than a single visual run.
+
+| Layout / scenario | Seeds | Success rate | Position RMSE | Final dock error | Collisions |
+|---|---:|---:|---:|---:|---:|
+| standard / nominal | [ ] | [ ] | [ ] | [ ] | [ ] |
+| standard / noisy | [ ] | [ ] | [ ] | [ ] | [ ] |
+| standard / dropout | [ ] | [ ] | [ ] | [ ] | [ ] |
+| standard / disturbed | [ ] | [ ] | [ ] | [ ] | [ ] |
+| random / nominal | [ ] | [ ] | [ ] | [ ] | [ ] |
+
+For the demo video, show at least one nominal run and one varied/disturbed or random-obstacle run, and show the estimate/uncertainty alongside ground truth in the quantitative result plots.
+
+## Install and run
+
+### Windows PowerShell
+
+```powershell
+py -m venv .venv
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+& ".\.venv\Scripts\Activate.ps1"
+python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-### Run the simulator
-From the repository root:
+### Normal visual simulation
 
-```bash
+```powershell
 python main.py
 ```
 
-For headless execution:
+### Random-obstacle layout
 
-```bash
-python main.py --headless --scenario nominal --duration 25
+```powershell
+python main.py --layout random --seed 2
 ```
 
-For a different scenario:
+### Headless robustness test
 
-```bash
-python main.py --scenario noisy
-python main.py --scenario dropout
-python main.py --scenario disturbed
-python main.py --scenario no_camera
+```powershell
+python main.py --headless --scenario noisy --seed 2
 ```
 
-The code is structured so that the runtime entry point is the main script in the project root, and the simulation/evaluation pipeline is separated from the estimator/controller logic.
+### Automated tests
 
-## Demo Video
-Demo video: Demo Vid
+```powershell
+python -m pytest -q
+```
 
-## Individual Contribution Statement
-- Rohan: Part A - Modelling, state-space model analysis, observability and controllability analysis.
-- Stephen: [Insert contribution]
-- Daniel: [Insert contribution]
-- Jake: [Insert contribution]
+## Demo video
 
-## Summary
-This project combines LiDAR-based navigation, visual marker docking, and an EKF-based state estimator into a complete autonomous mobile robot pipeline. It demonstrates a robust navigation-and-docking workflow in simulation with quantitative validation, clear coding structure, and explicit separation between ground-truth evaluation and online estimation/control.
+**5-minute demo:** [add final video link]
 
-The implementation is designed to be run from a fresh environment, uses the code in this repository as the core system, and is suitable for a project page summary with technical discussion and results.
+## Individual contributions
 
----
+See `Contribution Statement`.
 
-Project Page prepared for the repository: https://github.com/rg161/Integrated-Project-Track-A
+## Generative AI declaration
+
+OpenAI ChatGPT was used to assist with code integration review, debugging, refactoring, comments/docstrings, automated-test generation and documentation. Team members are responsible for reviewing, testing and being able to explain the submitted implementation and results.
+
+## Environment layouts
+
+The standard layout uses the original docking target on `y = 0.00 m`. The random layout uses six seed-randomised obstacles and relocates the complete charging target (dock, perimeter and ArUco marker) to `y = 0.80 m`. This gives the second layout a different final visual-docking location while retaining the same sensing, EKF and controller pipeline.
+
+
+### Random-layout navigability protection
+
+The random environment validates each generated obstacle set before the run. Obstacles are inflated by the same robot radius plus safety margin used by the runtime planner, and the layout is accepted only when a grid route remains from the sampled start to the docking goal. The controller also holds with `no_path` if A* cannot provide a route, and its local LiDAR hard-stop keeps linear velocity at zero while rotating toward the clearer side to recover from a close obstacle.

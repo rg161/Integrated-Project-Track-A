@@ -9,7 +9,6 @@ from dataclasses import asdict
 import csv
 import json
 from pathlib import Path
-import platform
 import numpy as np
 
 from .model import wrap
@@ -120,6 +119,7 @@ class Evaluator:
             and collisions == 0
         )
         return {
+            "layout": self.c.layout,
             "trial": self.trial.name,
             "seed": self.seed,
             "termination": termination,
@@ -155,10 +155,8 @@ class Evaluator:
             },
         }
 
-    def save(self, metrics, planner=None, camera_image=None):
-        """
-        Write the results folder
-        """
+    def save(self, metrics, planner=None, camera_image=None, obstacle_layout=None):
+        """Write logs, metrics, map, last camera frame and reproducibility settings."""
         self.output.mkdir(parents=True, exist_ok=True)
         # CSV
         keys = list(self.rows[0].keys())
@@ -166,7 +164,12 @@ class Evaluator:
             w = csv.DictWriter(f, fieldnames=keys)
             w.writeheader(); w.writerows(self.rows)
         (self.output / "metrics.json").write_text(json.dumps(metrics, indent=2) + "\n")
-        config_data = {"config": asdict(self.c), "trial": asdict(self.trial), "seed": self.seed}
+        config_data = {
+            "config": asdict(self.c),
+            "trial": asdict(self.trial),
+            "seed": self.seed,
+            "obstacles": obstacle_layout or [],
+        }
         (self.output / "run_config.json").write_text(json.dumps(config_data, indent=2, default=float) + "\n")
         if planner is not None:
             planner.save(self.output / "map.npz")

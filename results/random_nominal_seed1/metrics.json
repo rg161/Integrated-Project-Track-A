@@ -1,0 +1,49 @@
+{
+  "layout": "random",
+  "trial": "nominal",
+  "seed": 1,
+  "termination": "viewer_closed",
+  "controller_declared_docked": false,
+  "success": false,
+  "duration_s": 2.249999999999974,
+  "samples": 45,
+  "start_pose": [
+    -1.3343539792209085,
+    0.6947976449393265,
+    0.0
+  ],
+  "docking_zone_bounds": [
+    1.0,
+    1.2400000000000002,
+    0.64,
+    0.9600000000000001
+  ],
+  "final_estimate_in_docking_zone": false,
+  "final_true_in_docking_zone": false,
+  "ever_estimate_in_docking_zone": false,
+  "ever_true_in_docking_zone": false,
+  "true_time_in_docking_zone_s": 0.0,
+  "position_rmse_m": 0.05059472074536143,
+  "heading_rmse_deg": 0.9506664655985787,
+  "odometry_position_rmse_m": 0.005368095155738214,
+  "reference_tracking_rmse_m": 0.26761911147207945,
+  "final_docking_error_m": 2.0608663477568054,
+  "final_heading_error_deg": 7.263593617153904,
+  "mean_nees": 1.222397869963088,
+  "two_sigma_coverage_xyz": [
+    1.0,
+    1.0,
+    1.0
+  ],
+  "control_effort_v2_dt": 0.07289999999999999,
+  "control_effort_omega2_dt": 0.018406209721373277,
+  "collision_events": 0,
+  "camera_updates": 9,
+  "camera_rejections": 0,
+  "success_thresholds": {
+    "position_m": 0.08,
+    "heading_deg": 8,
+    "collision_events": 0,
+    "requires_recent_marker": true
+  }
+}

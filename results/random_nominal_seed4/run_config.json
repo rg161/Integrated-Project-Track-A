@@ -1,0 +1,176 @@
+{
+  "config": {
+    "dt": 0.05,
+    "physics_dt": 0.002,
+    "wheel_radius": 0.033,
+    "wheel_base": 0.288,
+    "wheel_limit": 7.88,
+    "max_v": 0.18,
+    "max_omega": 1.2,
+    "k1": 0.8,
+    "k2": 2.0,
+    "k3": 1.8,
+    "robot_radius": 0.235,
+    "safety_margin": 0.09,
+    "grid_resolution": 0.06,
+    "lookahead": 0.28,
+    "lidar_beams": 180,
+    "lidar_max": 3.5,
+    "lidar_sigma": 0.008,
+    "lidar_period": 0.1,
+    "lidar_pos": [
+      -0.049,
+      0.0,
+      0.17
+    ],
+    "camera_period": 0.25,
+    "camera_width": 480,
+    "camera_height": 360,
+    "camera_fovy": 58.0,
+    "corner_sigma": 0.25,
+    "marker_side": 0.24,
+    "marker_id": 7,
+    "marker_pos": [
+      1.6,
+      0.8,
+      0.24
+    ],
+    "camera_pos": [
+      0.078,
+      0.0,
+      0.18
+    ],
+    "camera_max_age": 0.75,
+    "encoder_sigma": 0.0005,
+    "odom_k": 0.0002,
+    "start": [
+      -1.45,
+      -0.7,
+      0.0
+    ],
+    "start_x_range": [
+      -1.75,
+      -1.15
+    ],
+    "start_y_range": [
+      -1.1,
+      1.1
+    ],
+    "goal": [
+      1.12,
+      0.8,
+      0.0
+    ],
+    "bounds": [
+      -2.2,
+      2.2,
+      -1.6,
+      1.6
+    ],
+    "goal_position_tolerance": 0.055,
+    "goal_heading_tolerance": 0.08726646259971647,
+    "max_duration": 100.0,
+    "docking_zone_center": [
+      1.12,
+      0.8
+    ],
+    "docking_zone_half_size": [
+      0.12,
+      0.16
+    ],
+    "docking_zone_line_width": 0.012,
+    "layout": "random",
+    "random_obstacle_count": 6,
+    "random_obstacle_x_range": [
+      -0.8,
+      0.8
+    ],
+    "random_obstacle_y_range": [
+      -1.15,
+      1.15
+    ],
+    "random_obstacle_half_size_range": [
+      0.12,
+      0.22
+    ],
+    "random_marker_pos": [
+      1.6,
+      0.8,
+      0.24
+    ],
+    "random_goal": [
+      1.12,
+      0.8,
+      0.0
+    ],
+    "random_docking_zone_center": [
+      1.12,
+      0.8
+    ]
+  },
+  "trial": {
+    "name": "nominal",
+    "noise_scale": 1.0,
+    "camera_dropout": 0.0,
+    "blackout": [
+      -1.0,
+      -1.0
+    ],
+    "push_force": 0.0,
+    "push_window": [
+      9.0,
+      9.5
+    ]
+  },
+  "seed": 4,
+  "obstacles": [
+    {
+      "name": "random_obstacle_1",
+      "x": -0.7767386419889668,
+      "y": 0.6338150168908023,
+      "half_x": 0.2134028408289364,
+      "half_y": 0.12849467869387765,
+      "half_z": 0.2
+    },
+    {
+      "name": "random_obstacle_2",
+      "x": -0.41151153403088236,
+      "y": -0.0019627237888284466,
+      "half_x": 0.17114435121032096,
+      "half_y": 0.19485077186625033,
+      "half_z": 0.2
+    },
+    {
+      "name": "random_obstacle_3",
+      "x": -0.11853534721483941,
+      "y": 0.6276762847961097,
+      "half_x": 0.1994905116203018,
+      "half_y": 0.12551722892037076,
+      "half_z": 0.2
+    },
+    {
+      "name": "random_obstacle_4",
+      "x": 0.14021703897613513,
+      "y": -0.39999601293454234,
+      "half_x": 0.12664699351847458,
+      "half_y": 0.13050591615333965,
+      "half_z": 0.2
+    },
+    {
+      "name": "random_obstacle_5",
+      "x": 0.42114333400641263,
+      "y": 0.1039627980399398,
+      "half_x": 0.12430955067648149,
+      "half_y": 0.14594132364344295,
+      "half_z": 0.2
+    },
+    {
+      "name": "random_obstacle_6",
+      "x": 0.7934588307523983,
+      "y": -0.8465383405022571,
+      "half_x": 0.16481887729811034,
+      "half_y": 0.1392799572398834,
+      "half_z": 0.2
+    }
+  ]
+}

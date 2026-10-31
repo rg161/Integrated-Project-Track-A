@@ -2,11 +2,11 @@
 
 from heapq import heappop, heappush
 import numpy as np
-from .noise import clean_scan
 
 
 class LidarPlanner:
     def __init__(self, config):
+        """Initialise the occupancy grid, LiDAR beam angles and obstacle-inflation radius."""
         self.config = config
         self.xmin, self.xmax, self.ymin, self.ymax = map(float, config.bounds)
         self.res = float(config.grid_resolution)
@@ -17,9 +17,12 @@ class LidarPlanner:
         self.last_path = np.empty((0, 2), dtype=float)
         self._inflation_cells = int(np.ceil((config.robot_radius + config.safety_margin) / self.res))
         self._disk_offsets = self._make_disk(self._inflation_cells)
+        self._robot_cells = int(np.ceil(config.robot_radius / self.res))
+        self._robot_disk_offsets = self._make_disk(self._robot_cells)
 
     @staticmethod
     def _make_disk(radius):
+        """Return integer grid offsets inside a disk used to inflate occupied cells."""
         out = []
         for dy in range(-radius, radius + 1):
             for dx in range(-radius, radius + 1):
@@ -28,16 +31,19 @@ class LidarPlanner:
         return out
 
     def world_to_cell(self, xy):
+        """Convert a world x/y point into an occupancy-grid row/column index."""
         x, y = np.asarray(xy, dtype=float)[:2]
         ix = int(np.round((x - self.xmin) / self.res))
         iy = int(np.round((y - self.ymin) / self.res))
         return iy, ix
 
     def cell_to_world(self, cell):
+        """Convert an occupancy-grid row/column index back into world x/y coordinates."""
         iy, ix = cell
         return np.array([self.xmin + ix * self.res, self.ymin + iy * self.res], dtype=float)
 
     def _inside(self, cell):
+        """Return True when a grid cell lies inside the occupancy map bounds."""
         iy, ix = cell
         return 0 <= iy < self.ny and 0 <= ix < self.nx
 
@@ -58,38 +64,70 @@ class LidarPlanner:
         return cells
 
     def update(self, pose, ranges):
-        """Update occupancy grid from a LiDAR scan and estimated base pose."""
+        """Update the occupancy map from LiDAR hits and explicit no-return rays.
+
+        Finite ranges are treated as obstacle hits: cells before the endpoint are
+        marked free and the endpoint is marked occupied. Positive infinity means
+        the beam reached maximum range without a hit, so the complete ray is
+        marked free. ``NaN`` values are treated as invalid and ignored. Preserving
+        no-return free-space evidence prevents stale obstacle cells from forming
+        artificial walls as the robot moves.
+        """
         pose = np.asarray(pose, dtype=float).reshape(3)
         r = np.asarray(ranges, dtype=float).reshape(-1)
         if len(r) != self.config.lidar_beams:
             raise ValueError("LiDAR scan length does not match Config.lidar_beams")
-        # Preserve infinity as no-return; reject actual invalid/too-close values.
-        finite = np.isfinite(r)
-        valid = finite & (r >= 0.12) & (r <= self.config.lidar_max)
-        if not np.any(valid):
+
+        finite_hit = np.isfinite(r) & (r >= 0.12) & (r <= self.config.lidar_max)
+        no_return = np.isposinf(r)
+        usable = finite_hit | no_return
+        if not np.any(usable):
             return False
 
-        c, s = np.cos(pose[2]), np.sin(pose[2])
+        c, sn = np.cos(pose[2]), np.sin(pose[2])
         lidar_offset = np.asarray(self.config.lidar_pos, dtype=float)[:2]
-        origin = pose[:2] + np.array([c * lidar_offset[0] - s * lidar_offset[1], s * lidar_offset[0] + c * lidar_offset[1]])
+        origin = pose[:2] + np.array([
+            c * lidar_offset[0] - sn * lidar_offset[1],
+            sn * lidar_offset[0] + c * lidar_offset[1],
+        ])
 
-        # Decay old evidence slowly so occasional spurious returns do not become permanent.
-        self.log_odds *= 0.997
-        for i in np.flatnonzero(valid):
+        # Decay old evidence so transient/noisy endpoints disappear in a few seconds.
+        self.log_odds *= 0.992
+        for i in np.flatnonzero(usable):
             ang = pose[2] + self.angles[i]
-            end = origin + r[i] * np.array([np.cos(ang), np.sin(ang)])
+            hit = bool(finite_hit[i])
+            ray_range = float(r[i]) if hit else float(self.config.lidar_max)
+            end = origin + ray_range * np.array([np.cos(ang), np.sin(ang)])
             cells = self._ray_cells(origin, end)
             if not cells:
                 continue
-            for cell in cells[:-1]:
-                self.log_odds[cell] = np.clip(self.log_odds[cell] - 0.20, -4.0, 4.0)
-            self.log_odds[cells[-1]] = np.clip(self.log_odds[cells[-1]] + 0.85, -4.0, 4.0)
+
+            free_cells = cells[:-1] if hit else cells
+            for cell in free_cells:
+                self.log_odds[cell] = np.clip(
+                    self.log_odds[cell] - 0.35, -4.0, 4.0
+                )
+            if hit:
+                self.log_odds[cells[-1]] = np.clip(
+                    self.log_odds[cells[-1]] + 0.85, -4.0, 4.0
+                )
+
+        # The robot's own footprint is known to be free. Clearing it prevents
+        # pose/noise ghosts from inflating around the current start cell.
+        robot_cell = self.world_to_cell(pose[:2])
+        if self._inside(robot_cell):
+            for dy, dx in self._robot_disk_offsets:
+                yy, xx = robot_cell[0] + dy, robot_cell[1] + dx
+                if 0 <= yy < self.ny and 0 <= xx < self.nx:
+                    self.log_odds[yy, xx] = min(self.log_odds[yy, xx], -2.0)
         return True
 
     def occupied(self):
-        return self.log_odds > 0.55
+        """Return cells with enough repeated LiDAR evidence to count as occupied."""
+        return self.log_odds > 1.0
 
     def inflated_occupied(self):
+        """Return occupied cells expanded by the robot radius and safety margin."""
         occ = self.occupied()
         inf = occ.copy()
         ys, xs = np.nonzero(occ)
@@ -105,6 +143,7 @@ class LidarPlanner:
 
     @staticmethod
     def _nearest_free(cell, blocked):
+        """Move an occupied start/goal cell to the closest free grid cell."""
         if not blocked[cell]:
             return cell
         ny, nx = blocked.shape
@@ -123,6 +162,7 @@ class LidarPlanner:
         return None
 
     def plan(self, start_xy, goal_xy):
+        """Run A* from estimated start to goal and return simplified world-coordinate waypoints."""
         start = self.world_to_cell(start_xy)
         goal = self.world_to_cell(goal_xy)
         if not (self._inside(start) and self._inside(goal)):
@@ -178,10 +218,12 @@ class LidarPlanner:
         return path.copy()
 
     def _line_free(self, a, b, blocked):
+        """Return True when the straight grid ray between two world points is obstacle-free."""
         cells = self._ray_cells(a, b)
         return bool(cells) and all(not blocked[c] for c in cells)
 
     def _simplify(self, path, blocked):
+        """Remove unnecessary A* waypoints while preserving collision-free line segments."""
         if len(path) <= 2:
             return path
         out = [path[0]]
@@ -195,4 +237,5 @@ class LidarPlanner:
         return np.asarray(out)
 
     def save(self, path):
+        """Save the current occupancy log-odds map and grid metadata to a compressed NPZ file."""
         np.savez_compressed(path, log_odds=self.log_odds, bounds=np.array(self.config.bounds), resolution=self.res)

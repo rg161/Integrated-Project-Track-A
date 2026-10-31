@@ -135,12 +135,33 @@ class StateFeedbackController:
             return np.inf
         return float(np.min(scan[front]))
 
-    def command(self, x_hat, P, path, lidar_scan, camera_age):
-        """Compute a velocity command from state estimate, path, and environment.
+    def _escape_turn_rate(self, scan):
+        """Choose an in-place turn toward the side with more LiDAR clearance.
 
-        The controller validates the estimate, checks safety limits, selects a
-        behavior based on how close the robot is to the goal, and then returns a
-        command with the appropriate mode and reference pose.
+        The hard-stop layer uses this only when an obstacle is too close in front.
+        Mean finite range in broad left and right sectors is compared, and the
+        robot rotates toward the clearer side while keeping linear speed at zero.
+        """
+        scan = np.asarray(scan, dtype=float).reshape(-1)
+        if len(scan) != self.c.lidar_beams:
+            return 0.0
+        angles = self.c.lidar_angle_min + self.c.lidar_angle_inc * np.arange(len(scan))
+        finite = np.isfinite(scan)
+        left = finite & (angles >= np.deg2rad(25.0)) & (angles <= np.deg2rad(120.0))
+        right = finite & (angles <= -np.deg2rad(25.0)) & (angles >= -np.deg2rad(120.0))
+        left_clear = float(np.mean(scan[left])) if np.any(left) else 0.0
+        right_clear = float(np.mean(scan[right])) if np.any(right) else 0.0
+        direction = 1.0 if left_clear >= right_clear else -1.0
+        return float(direction * min(0.65, self.c.max_omega))
+
+    def command(self, x_hat, P, path, lidar_scan, camera_age, marker_bearing=None):
+        """Compute a velocity command from estimated state, path, LiDAR and marker bearing.
+
+        ``camera_age`` is the time since the ArUco marker was last detected.
+        ``marker_bearing`` is the latest horizontal marker bearing in the robot
+        convention (positive left, negative right). Near the dock this bearing
+        is used as a visual-servo correction so the robot keeps the tag inside
+        the front-camera field of view instead of rotating away from it.
         """
         x_hat = np.asarray(x_hat, dtype=float).reshape(3)
         P = np.asarray(P, dtype=float).reshape(3, 3)
@@ -166,44 +187,76 @@ class StateFeedbackController:
 
         to_goal = goal[:2] - x_hat[:2]
         goal_dist = float(np.linalg.norm(to_goal))
+
+        # Never fall back to driving directly at the goal when A* has no route.
+        # Once already inside the docking region, the docking state machine may
+        # continue without a global path because only the final local pose matters.
+        if len(np.asarray(path).reshape(-1, 2)) == 0 and goal_dist > self.c.lookahead:
+            self.dwell = 0
+            return ControlOutput(0.0, 0.0, False, "no_path")
         # Goal heading error in the robot's yaw frame. wrap() keeps the difference
         # in the principal interval [-pi, pi]: e_yaw = wrap(yaw_goal - yaw_robot).
         heading_err_goal = float(wrap(goal[2] - x_hat[2]))
 
         # Fine docking state machine.
+        marker_recent = (
+            marker_bearing is not None
+            and np.isfinite(marker_bearing)
+            and camera_age <= self.c.camera_max_age
+        )
         if goal_dist <= self.c.lookahead:
             if goal_dist <= self.c.goal_position_tolerance:
-                # Final goal alignment: hold position while the heading and camera
-                # observation remain within tolerance for a dwell period.
+                # Final alignment is visually assisted. When the marker is
+                # visible, keep it centred while retaining a smaller world-yaw
+                # correction. This prevents the robot from rotating the tag out
+                # of the camera view during the last few centimetres.
                 v = 0.0
-                # Use the yaw error as a direct proportional steering command:
-                # omega = k * e_yaw, clipped to the maximum allowable turn rate.
-                omega = np.clip(2.0 * heading_err_goal, -0.7, 0.7)
+                if marker_recent:
+                    omega = np.clip(
+                        2.6 * float(marker_bearing) + 0.45 * heading_err_goal,
+                        -0.55,
+                        0.55,
+                    )
+                    marker_aligned = abs(float(marker_bearing)) <= np.deg2rad(5.0)
+                    mode_name = "dock_visual_align"
+                else:
+                    # If the marker is temporarily lost, rotate slowly toward
+                    # the known docking heading to reacquire it rather than
+                    # spinning aggressively.
+                    omega = np.clip(1.0 * heading_err_goal, -0.30, 0.30)
+                    marker_aligned = False
+                    mode_name = "dock_reacquire"
+
                 good = (
-                    abs(heading_err_goal) <= self.c.goal_heading_tolerance
-                    and camera_age <= self.c.camera_max_age
+                    marker_recent
+                    and marker_aligned
+                    and abs(heading_err_goal) <= self.c.goal_heading_tolerance
                 )
                 self.dwell = self.dwell + 1 if good else 0
                 done = self.dwell >= self.dwell_required
                 if done:
                     v = omega = 0.0
                 return ControlOutput(
-                    float(v), float(omega), done, "docked" if done else "dock_align",
+                    float(v),
+                    float(omega),
+                    done,
+                    "docked" if done else mode_name,
                     tuple(goal),
                 )
+
             self.dwell = 0
-            # Approach the goal with a slow, heading-aware motion.
-            # bearing is the angle from the robot heading to the goal direction:
-            # bearing = wrap(atan2(goal_y - y, goal_x - x) - yaw).
+            # Approach the goal with a slow motion. If the marker is currently
+            # visible, use its image bearing directly as the primary steering
+            # error so the tag stays near the centre of the front camera.
             bearing = float(wrap(np.arctan2(to_goal[1], to_goal[0]) - x_hat[2]))
-            # Distance-based speed scaling: the robot slows as it approaches the
-            # final goal, while the cosine term prevents reversing the robot when
-            # the goal is behind it.
-            v = min(0.10, 0.6 * goal_dist) * max(0.0, np.cos(bearing))
-            # The angular velocity is a proportional controller on bearing and the
-            # residual goal yaw error: omega = k_bearing * bearing + k_yaw * e_yaw.
-            omega = np.clip(2.2 * bearing + 0.35 * heading_err_goal, -self.c.max_omega, self.c.max_omega)
-            mode = "dock_approach"
+            steering_error = float(marker_bearing) if marker_recent else bearing
+            v = min(0.10, 0.6 * goal_dist) * max(0.0, np.cos(steering_error))
+            omega = np.clip(
+                2.2 * steering_error + 0.25 * heading_err_goal,
+                -self.c.max_omega,
+                self.c.max_omega,
+            )
+            mode = "dock_visual_approach" if marker_recent else "dock_approach"
             ref = goal
         else:
             self.dwell = 0
@@ -250,10 +303,11 @@ class StateFeedbackController:
 
         # Local LiDAR safety layer. Rotation remains available so the robot can escape.
         if clearance < 0.24:
-            # Hard stop when the obstacle is within the minimum permitted distance.
-            # This enforces a critical safety boundary: v = 0.
+            # Hard stop linear motion, but rotate toward the clearer side so the
+            # robot can recover instead of remaining pointed at the obstacle.
             v = 0.0
-            mode += "+stop"
+            omega = self._escape_turn_rate(lidar_scan)
+            mode += "+escape"
         elif clearance < 0.50:
             # Scale down forward speed when the obstacle is nearby but not an immediate stop.
             # Linear interpolation between the stop threshold and the warning threshold:
