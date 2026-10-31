@@ -28,6 +28,35 @@ pip install -r requirements.txt
 
 The front camera is rigidly mounted to the TurtleBot. During normal navigation, obstacles naturally move in and out of its field of view as the robot turns. Near the charging station, the controller uses the detected ArUco marker bearing as a visual-servo correction so the marker is kept near the centre of the camera while the robot aligns and docks.
 
+### Toggle to the robot camera view
+
+Start the simulation with the visual MuJoCo viewer:
+
+```powershell
+python main.py
+```
+
+Do **not** use `--headless` if you want to view the camera.
+
+Once the MuJoCo viewer is open and active:
+
+```text
+]       cycle forward through fixed cameras
+[       cycle backward through fixed cameras
+Esc     return to the normal free/external camera
+F1      show the MuJoCo shortcut/help overlay
+```
+
+Cycle with `[` or `]` until the viewer is using the robot's fixed `front_camera`. This is the same named camera used to render the RGB image supplied to the ArUco sensing code.
+
+Because `front_camera` is fixed to the robot body, obstacles and the ArUco marker will naturally move across and leave the image when the robot turns or drives past them. This is normal behaviour for a forward-facing camera.
+
+To return to the normal external/free view at any time, press:
+
+```text
+Esc
+```
+
 ## Run
 
 The interface is intentionally small.
