@@ -2,6 +2,15 @@ CONTRIBUTIONS
 
 Rohan:
 Part A - Modelling -> state-space model analysis, observability and controllability analysis
+track_a/model.py
+track_a/camera_view.py
+part_a_check.py
+validate_model.py
+figures/model_validation.png
+wheel_test.py
+ReadMe_PartA
+small edits to:
+runner.py and main.py
 
 Stephen:
  Part C - For Part C, I developed and integrated the Extended Kalman Filter (EKF) used to estimate the TurtleBot3’s position and heading. 
