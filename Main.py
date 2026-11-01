@@ -31,6 +31,11 @@ def main(argv=None):
     parser.add_argument("--seed", type=int, default=1, help="reproducible random seed")
     parser.add_argument("--duration", type=float, default=100.0, help="maximum simulated seconds")
     parser.add_argument("--headless", action="store_true", help="run without the MuJoCo viewer")
+    parser.add_argument("--realtime", action="store_true", help="pace a headless run to real time")
+    parser.add_argument("--camera-window", action="store_true",
+                        help="show the robot camera view live (needs GUI OpenCV)")
+    parser.add_argument("--no-camera-video", action="store_true",
+                        help="do not save the robot camera view (camera_view.mp4)")
     args = parser.parse_args(argv)
 
     if args.duration <= 0:
@@ -51,6 +56,9 @@ def main(argv=None):
             seed=args.seed,
             output=output,
             viewer=not args.headless,
+            realtime=args.realtime,
+            camera_video=not args.no_camera_video,
+            camera_window=args.camera_window,
         )
     except KeyboardInterrupt:
         print("Interrupted; simulator closed safely.")
