@@ -1,35 +1,166 @@
-# Integrated-Project-Track-A
-Mobile Robot Track: The turtlebot, equipped with 2D lidar and camera (MuJoCo), will navigate an obstacle-filled room using Lidar. The turtlebot must also visually dock with the ArUco-marked charging station. 
+# Track A — TurtleBot3 Visual Waypoint Navigation
 
-PART A:
+A minimal simulation-only implementation for **41014 Sensors and Control in Mechatronics Systems — Assessment 4**.
 
-PARAMETERS
-Nominal wheel radius = 0.033m (from geometry)
-Nominal wheel seperation = 0.288m
-Calculated wheel radius, from XML = 0.0283m
-Calculated wheel seperation, from XML = 0.353m
-dt = 0.05s
+The robot uses:
 
-Wheel radius at different wheel speeds.
-1.5rad/s -> 0.0313m
-3rad/s -> 0.0283m
-4.5rad/s -> 0.0281m
-At slower speeds, the robot travels a further distance per wheel turn, meaning the wheels have a larger radius.
+- wheel encoders for EKF prediction,
+- a rendered RGB camera + ArUco marker for EKF correction,
+- 2D LiDAR for occupancy mapping and obstacle avoidance,
+- A* for path planning,
+- an estimated-state feedback controller for path tracking and docking,
+- MuJoCo ground truth **only for evaluation**.
 
-OBSERVABILITY (starting with [0, 0, 0.3], u = [0.15, 0.3], 30 steps)
-Landmarks                   Rank                Singular values
-One                         2                   0.00
-Two, far away               3                   4.99
-Two, nearly aligned         3                   0.85
-Two, close together         3                   0.09
+## Setup
 
-CONTROLLABILITY
-Speed (v)                   Rank               Singular Values
-0m/s                        2                  0.0866, 0.0866, 0
-0.15m/s                     3                  0.0866, 0.0866, 5.3e-4
+### Windows PowerShell
 
-MUJOCO VALIDATION
-Final position error:   nominal parameter (0.209m), Calculated parameter (0.044m)
-Max heading error:      nominal parameter (14.2 deg), Calculated parameter (4.8 deg)
-Final heading error:    nominal parameter(1.1 deg), Calculated parameter (0.7 deg)
+```powershell
+py -m venv .venv
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+& ".\.venv\Scripts\Activate.ps1"
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+```
 
+
+## Camera and visual docking
+
+The front camera is rigidly mounted to the TurtleBot. During normal navigation, obstacles naturally move in and out of its field of view as the robot turns. Near the charging station, the controller uses the detected ArUco marker bearing as a visual-servo correction so the marker is kept near the centre of the camera while the robot aligns and docks.
+
+### Toggle to the robot camera view
+
+Start the simulation with the visual MuJoCo viewer:
+
+```powershell
+python main.py
+```
+
+Do **not** use `--headless` if you want to view the camera.
+
+Once the MuJoCo viewer is open and active:
+
+```text
+]       cycle forward through fixed cameras
+[       cycle backward through fixed cameras
+Esc     return to the normal free/external camera
+F1      show the MuJoCo shortcut/help overlay
+```
+
+Cycle with `[` or `]` until the viewer is using the robot's fixed `front_camera`. This is the same named camera used to render the RGB image supplied to the ArUco sensing code.
+
+Because `front_camera` is fixed to the robot body, obstacles and the ArUco marker will naturally move across and leave the image when the robot turns or drives past them. This is normal behaviour for a forward-facing camera.
+
+To return to the normal external/free view at any time, press:
+
+```text
+Esc
+```
+
+## Run
+
+The interface is intentionally small.
+
+### Standard layout — visual viewer
+
+```powershell
+python main.py
+```
+
+### Random-obstacle layout
+
+Six obstacles are randomised from the seed while keeping the start and dock clear.
+The generated layout is path-checked, and the online LiDAR map uses both obstacle hits and no-return free-space rays so stale detections cannot create permanent ghost walls.
+
+```powershell
+python main.py --layout random --seed 2
+```
+
+### Headless robustness run
+
+```powershell
+python main.py --headless --scenario noisy --seed 2
+```
+
+Available layouts:
+
+```text
+standard   original two-obstacle room
+random     six seed-reproducible random obstacles
+```
+
+Available scenarios:
+
+```text
+nominal    normal sensor noise
+noisy      increased sensor noise + some camera dropout
+dropout    camera dropout + temporary blackout
+disturbed  brief sideways force disturbance
+```
+
+
+Other useful options:
+
+```text
+--seed N       repeatable random start/obstacle/noise seed
+--duration S   maximum simulation duration in seconds
+--headless     run without the MuJoCo viewer
+```
+
+## Tests
+
+```powershell
+python -m pytest -q
+```
+
+The MuJoCo scene tests automatically skip if MuJoCo is not installed. All runtime functions and methods are required by a regression test to contain a `"""docstring"""`.
+
+## Runtime files
+
+```text
+main.py
+track_a/
+├── config.py        parameters, scenarios, random start/obstacles
+├── model.py         differential-drive model and Jacobians
+├── frames.py        camera/marker coordinate transforms
+├── noise.py         LiDAR cleaning, camera gating, odometry covariance
+├── sensing.py       ArUco detection + PnP pose measurement
+├── estimation.py    Part C EKF
+├── planning.py      LiDAR occupancy map + A*
+├── controller.py    estimated-state path tracking + docking
+├── simulator.py     MuJoCo sensors, physics and collision counting
+├── ground_truth.py  evaluation-only true pose
+├── evaluation.py    RMSE/NEES/docking metrics + result export
+└── runner.py        one integrated sensor-estimation-control loop
+
+models/
+├── track_a_scene.xml
+└── robotis_tb3/assets/
+
+tests/
+├── test_core.py
+└── test_simulator.py
+```
+
+## Results
+
+Each run creates:
+
+```text
+results/<layout>_<scenario>_seed<seed>/
+├── metrics.json
+├── log.csv
+├── run_config.json
+├── map.npz
+├── camera.png
+└── summary.png
+```
+
+For the final project page, run repeated seeds for the standard and random layouts and report success rate, EKF RMSE, docking error, collisions, NEES/coverage, and camera acceptance/rejection.
+
+## Layout targets
+
+The standard layout docks at `(1.12, 0.00)` with the ArUco marker at `(1.60, 0.00, 0.24)`.
+The random layout uses a different docking location at `(1.12, 0.80)` with the marker at `(1.60, 0.80, 0.24)`, while keeping the same forward-facing camera geometry.
+
+The random layout also moves the ArUco charging target and charging-station geometry, not just the obstacles.

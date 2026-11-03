@@ -20,3 +20,8 @@ Daniel:
 Part B - Sensing -> Frame handling, ground truth, noise handling
 
 Jake:
+Part D - Control -> controller design, tuning and tracking results
+[controller.py]
+metrics.py
+run_partd.py
+trajectory.py
