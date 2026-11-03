@@ -2,7 +2,7 @@
 
 ## Team
 
-**Group number:** [add group number]
+**Group number:** 71
 
 - Rohan
 - Stephen
