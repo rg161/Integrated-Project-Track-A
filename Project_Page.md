@@ -9,7 +9,7 @@
 - Daniel
 - Jake
 
-**Repository:** [add final GitHub repository link]
+**Repository:** https://github.com/rg161/Integrated-Project-Track-A
 
 ## Project overview
 
@@ -227,7 +227,7 @@ python -m pytest -q
 
 ## Demo video
 
-**5-minute demo:** [add final video link]
+**5-minute demo:** https://studentutsedu-my.sharepoint.com/:v:/g/personal/stephen_young-1_student_uts_edu_au/IQAmSTihjAChSJt8dIdPUvS0AQbLDuuYCDPcWe33wLjFT_0?e=lrMc7s
 
 ## Individual contributions
 
